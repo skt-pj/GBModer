@@ -2,6 +2,17 @@ plugins {
     id 'com.android.application'
 }
 
+def generatedGpuSourceDir = file("$buildDir/generated/gbmoderGpu/java")
+def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
+    inputs.dir('src/main/java')
+    inputs.file(rootProject.file('tools/prepare_gpu_source.py'))
+    outputs.dir(generatedGpuSourceDir)
+    commandLine 'python3',
+            rootProject.file('tools/prepare_gpu_source.py').absolutePath,
+            file('src/main/java').absolutePath,
+            generatedGpuSourceDir.absolutePath
+}
+
 android {
     namespace 'com.sktpj.gbmoder'
     compileSdk 35
@@ -29,8 +40,20 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            java.srcDirs = [generatedGpuSourceDir]
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == 'preBuild') {
+        task.dependsOn prepareGpuSource
     }
 }

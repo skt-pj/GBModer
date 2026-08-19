@@ -80,14 +80,6 @@ public final class GameBoyFilter {
         return 144;
     }
 
-    public static int getBaseWidth(String mode) {
-        return getTargetWidth(mode, 1);
-    }
-
-    public static int getBaseHeight(String mode, int sourceWidth, int sourceHeight) {
-        return getTargetHeight(mode, sourceHeight);
-    }
-
     public static void apply(Bitmap bitmap, String mode, int brightness, int contrastValue, boolean dither) {
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();

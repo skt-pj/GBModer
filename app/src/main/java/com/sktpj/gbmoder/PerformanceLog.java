@@ -17,6 +17,7 @@ import java.util.Locale;
 public final class PerformanceLog {
     private static final String TAG = "GBModerPerf";
     private static final Object LOCK = new Object();
+    private static final String FILE_NAME = "gbmoder-performance.log";
 
     private static HandlerThread logThread;
     private static Handler logHandler;
@@ -44,11 +45,7 @@ public final class PerformanceLog {
         }
 
         ensureThread();
-        File root = context.getExternalFilesDir(null);
-        if (root == null) {
-            root = context.getFilesDir();
-        }
-        logFile = new File(root, "gbmoder-performance.log");
+        logFile = resolveLogFile(context);
 
         String header = "session_start"
                 + " wall_ms=" + System.currentTimeMillis()
@@ -77,6 +74,14 @@ public final class PerformanceLog {
         return file == null ? "" : file.getAbsolutePath();
     }
 
+    public static boolean hasLog(Context context) {
+        if (context == null) {
+            return false;
+        }
+        File file = resolveLogFile(context);
+        return file.isFile() && file.length() > 0L;
+    }
+
     public static void syncToUri(Context context, Uri destination, SyncCallback callback) {
         if (context == null || destination == null) {
             dispatchSyncResult(context, callback, false, "同期先がありません");
@@ -91,8 +96,8 @@ public final class PerformanceLog {
         }
 
         handler.post(() -> {
-            File file = logFile;
-            if (file == null || !file.isFile()) {
+            File file = resolveLogFile(context);
+            if (!file.isFile() || file.length() <= 0L) {
                 dispatchSyncResult(context, callback, false, "同期するログがありません");
                 return;
             }
@@ -119,6 +124,21 @@ public final class PerformanceLog {
                 dispatchSyncResult(context, callback, false, error.getClass().getSimpleName());
             }
         });
+    }
+
+    private static File resolveLogFile(Context context) {
+        File file = logFile;
+        if (file != null) {
+            return file;
+        }
+
+        File root = context.getExternalFilesDir(null);
+        if (root == null) {
+            root = context.getFilesDir();
+        }
+        file = new File(root, FILE_NAME);
+        logFile = file;
+        return file;
     }
 
     private static void dispatchSyncResult(

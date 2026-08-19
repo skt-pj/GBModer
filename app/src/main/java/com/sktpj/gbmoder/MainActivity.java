@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
         root.addView(title, matchWrap());
 
         TextView description = text(
-                "他アプリをGame Boy風に表示します。初回のみGBModerのユーザー補助サービスを有効にしてください。",
+                "他アプリをGBC / GBA / Nintendo DS風に表示します。初回のみGBModerのユーザー補助サービスを有効にしてください。",
                 14,
                 false
         );
@@ -73,9 +73,9 @@ public class MainActivity extends Activity {
         root.addView(text("表示モード", 14, true), matchWrap());
         modeSpinner = new Spinner(this);
         String[] modes = {
-                "Game Boy / 4階調",
-                "Game Boy Color / RGB555",
-                "Game Boy Advance / RGB555"
+                "Game Boy Color / 160×144 / 32,768色・同時56色",
+                "Game Boy Advance / 240×160 / 32,768色",
+                "Nintendo DS / 256×192 / 26万色"
         };
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, modes);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -354,9 +354,9 @@ public class MainActivity extends Activity {
 
     private String getSelectedMode() {
         int position = modeSpinner.getSelectedItemPosition();
-        if (position == 1) return GameBoyFilter.MODE_GBC;
-        if (position == 2) return GameBoyFilter.MODE_GBA;
-        return GameBoyFilter.MODE_GB;
+        if (position == 0) return GameBoyFilter.MODE_GBC;
+        if (position == 1) return GameBoyFilter.MODE_GBA;
+        return GameBoyFilter.MODE_DS;
     }
 
     private int getBrightness() {

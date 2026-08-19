@@ -384,9 +384,10 @@ public class FilterCaptureService extends Service {
             }
 
             int targetWidth = GameBoyFilter.getBaseWidth(mode);
-            int targetHeight = Math.max(
-                    1,
-                    Math.round(targetWidth * (image.getHeight() / (float) image.getWidth()))
+            int targetHeight = GameBoyFilter.getBaseHeight(
+                    mode,
+                    image.getWidth(),
+                    image.getHeight()
             );
 
             if (lowResolutionBitmap == null
@@ -446,6 +447,9 @@ public class FilterCaptureService extends Service {
         }
         if (GameBoyFilter.MODE_GBA.equals(requestedMode)) {
             return GameBoyFilter.MODE_GBA;
+        }
+        if (GameBoyFilter.MODE_DS.equals(requestedMode)) {
+            return GameBoyFilter.MODE_DS;
         }
         return GameBoyFilter.MODE_GB;
     }

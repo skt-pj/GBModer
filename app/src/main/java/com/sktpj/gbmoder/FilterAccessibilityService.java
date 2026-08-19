@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -59,9 +60,11 @@ public class FilterAccessibilityService extends AccessibilityService {
     private boolean windowFilterRunning = false;
     private boolean screenshotInFlight = false;
     private String windowFilterMode = GameBoyFilter.MODE_GB;
+    private String windowFilterResolution = GameBoyFilter.RESOLUTION_GB;
     private int windowFilterBrightness = 6;
     private int windowFilterContrast = 122;
     private boolean windowFilterDither = true;
+    private long performanceFrameIndex = 0L;
 
     public static FilterAccessibilityService getInstance() {
         return instance;
@@ -88,19 +91,38 @@ public class FilterAccessibilityService extends AccessibilityService {
     public void onInterrupt() {
     }
 
-    public void startWindowFilter(String mode, int brightness, int contrast, boolean dither) {
+    public void startWindowFilter(
+            String mode,
+            String resolution,
+            int brightness,
+            int contrast,
+            boolean dither
+    ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             Log.w(TAG, "Window screenshot filter requires Android 14+");
             return;
         }
 
         windowFilterMode = safeMode(mode);
+        windowFilterResolution = GameBoyFilter.safeResolution(resolution);
         windowFilterBrightness = brightness;
         windowFilterContrast = contrast;
         windowFilterDither = dither;
         windowFilterRunning = true;
         screenshotInFlight = false;
         captureVisible = true;
+        performanceFrameIndex = 0L;
+
+        PerformanceLog.startSession(
+                this,
+                "accessibility_window",
+                windowFilterMode,
+                windowFilterResolution,
+                windowFilterBrightness,
+                windowFilterContrast,
+                windowFilterDither,
+                WINDOW_CAPTURE_INTERVAL_MS
+        );
 
         ensureFilterThread();
         showFilterNotification();
@@ -108,6 +130,7 @@ public class FilterAccessibilityService extends AccessibilityService {
         mainHandler.post(captureRunnable);
 
         Log.i(TAG, "Window filter started mode=" + windowFilterMode
+                + " resolution=" + windowFilterResolution
                 + " brightness=" + windowFilterBrightness
                 + " contrast=" + windowFilterContrast
                 + " dither=" + windowFilterDither
@@ -120,6 +143,7 @@ public class FilterAccessibilityService extends AccessibilityService {
         mainHandler.removeCallbacks(captureRunnable);
         removeOverlayInternal();
         cancelFilterNotification();
+        PerformanceLog.log("session_stop pipeline=accessibility_window frames=" + performanceFrameIndex);
         Log.i(TAG, "Window filter stopped");
     }
 
@@ -151,7 +175,7 @@ public class FilterAccessibilityService extends AccessibilityService {
         }
 
         screenshotInFlight = true;
-        long requestStartedAt = System.currentTimeMillis();
+        long requestStartedNs = SystemClock.elapsedRealtimeNanos();
         Log.d(TAG, "Window screenshot requested id=" + target.windowId
                 + " package=" + target.packageName
                 + " bounds=" + target.bounds);
@@ -162,10 +186,16 @@ public class FilterAccessibilityService extends AccessibilityService {
                 new TakeScreenshotCallback() {
                     @Override
                     public void onSuccess(ScreenshotResult screenshot) {
+                        long screenshotCallbackNs = SystemClock.elapsedRealtimeNanos();
                         screenshotInFlight = false;
+
+                        long copyStartedNs = SystemClock.elapsedRealtimeNanos();
                         Bitmap softwareBitmap = copyScreenshotToSoftwareBitmap(screenshot);
+                        long copyFinishedNs = SystemClock.elapsedRealtimeNanos();
                         if (softwareBitmap == null) {
                             Log.e(TAG, "Window screenshot returned no bitmap package=" + target.packageName);
+                            PerformanceLog.log("frame_failure pipeline=accessibility_window stage=bitmap_copy package="
+                                    + target.packageName);
                             scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
                             return;
                         }
@@ -178,10 +208,14 @@ public class FilterAccessibilityService extends AccessibilityService {
                             return;
                         }
 
+                        long screenshotWaitNs = screenshotCallbackNs - requestStartedNs;
+                        long copyNs = copyFinishedNs - copyStartedNs;
                         handler.post(() -> processWindowScreenshot(
                                 softwareBitmap,
                                 target,
-                                requestStartedAt
+                                requestStartedNs,
+                                screenshotWaitNs,
+                                copyNs
                         ));
                     }
 
@@ -189,6 +223,9 @@ public class FilterAccessibilityService extends AccessibilityService {
                     public void onFailure(int errorCode) {
                         screenshotInFlight = false;
                         Log.w(TAG, "Window screenshot failed code=" + errorCode
+                                + " package=" + target.packageName);
+                        PerformanceLog.log("frame_failure pipeline=accessibility_window stage=screenshot"
+                                + " code=" + errorCode
                                 + " package=" + target.packageName);
                         setCaptureVisible(false);
                         long retryDelay = errorCode == ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT
@@ -225,16 +262,25 @@ public class FilterAccessibilityService extends AccessibilityService {
         }
     }
 
-    private void processWindowScreenshot(Bitmap source, TargetWindow target, long requestStartedAt) {
+    private void processWindowScreenshot(
+            Bitmap source,
+            TargetWindow target,
+            long requestStartedNs,
+            long screenshotWaitNs,
+            long copyNs
+    ) {
         Bitmap lowResolutionBitmap = null;
         try {
-            int targetWidth = GameBoyFilter.getBaseWidth(windowFilterMode);
-            int targetHeight = GameBoyFilter.getBaseHeight(
-                    windowFilterMode,
-                    source.getWidth(),
+            int targetWidth = GameBoyFilter.getTargetWidth(
+                    windowFilterResolution,
+                    source.getWidth()
+            );
+            int targetHeight = GameBoyFilter.getTargetHeight(
+                    windowFilterResolution,
                     source.getHeight()
             );
 
+            long downsampleStartedNs = SystemClock.elapsedRealtimeNanos();
             lowResolutionBitmap = Bitmap.createBitmap(
                     targetWidth,
                     targetHeight,
@@ -252,7 +298,9 @@ public class FilterAccessibilityService extends AccessibilityService {
                     new Rect(0, 0, targetWidth, targetHeight),
                     downsamplePaint
             );
+            long downsampleFinishedNs = SystemClock.elapsedRealtimeNanos();
 
+            long filterStartedNs = SystemClock.elapsedRealtimeNanos();
             GameBoyFilter.apply(
                     lowResolutionBitmap,
                     windowFilterMode,
@@ -260,21 +308,55 @@ public class FilterAccessibilityService extends AccessibilityService {
                     windowFilterContrast,
                     windowFilterDither
             );
+            long filterFinishedNs = SystemClock.elapsedRealtimeNanos();
 
             Bitmap frame = lowResolutionBitmap;
             lowResolutionBitmap = null;
+            long postedNs = SystemClock.elapsedRealtimeNanos();
+            long frameIndex = ++performanceFrameIndex;
+            int sourceWidth = source.getWidth();
+            int sourceHeight = source.getHeight();
+            long downsampleNs = downsampleFinishedNs - downsampleStartedNs;
+            long filterNs = filterFinishedNs - filterStartedNs;
+
             mainHandler.post(() -> {
                 if (!windowFilterRunning) {
                     frame.recycle();
                     return;
                 }
+
+                long mainStartedNs = SystemClock.elapsedRealtimeNanos();
                 showFrame(frame, target.bounds);
-                long elapsed = System.currentTimeMillis() - requestStartedAt;
-                long delay = Math.max(0L, WINDOW_CAPTURE_INTERVAL_MS - elapsed);
+                long overlayFinishedNs = SystemClock.elapsedRealtimeNanos();
+                long totalNs = overlayFinishedNs - requestStartedNs;
+                long mainQueueNs = mainStartedNs - postedNs;
+                long overlayNs = overlayFinishedNs - mainStartedNs;
+
+                PerformanceLog.log(
+                        "frame=" + frameIndex
+                                + " pipeline=accessibility_window"
+                                + " package=" + target.packageName
+                                + " mode=" + windowFilterMode
+                                + " resolution=" + windowFilterResolution
+                                + " source=" + sourceWidth + "x" + sourceHeight
+                                + " target=" + targetWidth + "x" + targetHeight
+                                + " screenshot_wait_ms=" + PerformanceLog.formatMs(screenshotWaitNs)
+                                + " bitmap_copy_ms=" + PerformanceLog.formatMs(copyNs)
+                                + " downsample_ms=" + PerformanceLog.formatMs(downsampleNs)
+                                + " filter_ms=" + PerformanceLog.formatMs(filterNs)
+                                + " main_queue_ms=" + PerformanceLog.formatMs(mainQueueNs)
+                                + " overlay_ms=" + PerformanceLog.formatMs(overlayNs)
+                                + " total_ms=" + PerformanceLog.formatMs(totalNs)
+                );
+
+                long elapsedMs = totalNs / 1_000_000L;
+                long delay = Math.max(0L, WINDOW_CAPTURE_INTERVAL_MS - elapsedMs);
                 scheduleNextWindowCapture(delay);
             });
         } catch (Throwable error) {
             Log.e(TAG, "Window frame processing failed", error);
+            PerformanceLog.log("frame_failure pipeline=accessibility_window stage=processing error="
+                    + error.getClass().getSimpleName());
             scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
         } finally {
             source.recycle();

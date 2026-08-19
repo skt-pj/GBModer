@@ -25,6 +25,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.WindowManager;
@@ -38,6 +39,7 @@ public class FilterCaptureService extends Service {
     public static final String EXTRA_RESULT_CODE = "result_code";
     public static final String EXTRA_RESULT_DATA = "result_data";
     public static final String EXTRA_MODE = "mode";
+    public static final String EXTRA_RESOLUTION = "resolution";
     public static final String EXTRA_BRIGHTNESS = "brightness";
     public static final String EXTRA_CONTRAST = "contrast";
     public static final String EXTRA_DITHER = "dither";
@@ -60,10 +62,12 @@ public class FilterCaptureService extends Service {
     private int captureHeight;
     private int densityDpi;
     private String mode = GameBoyFilter.MODE_GB;
+    private String resolution = GameBoyFilter.RESOLUTION_GB;
     private int brightness = 6;
     private int contrast = 122;
     private boolean dither = true;
     private long lastFrameNanos = 0L;
+    private long performanceFrameIndex = 0L;
     private boolean cleanedUp = false;
     private boolean projectionProbePending = true;
 
@@ -102,10 +106,23 @@ public class FilterCaptureService extends Service {
         cleanedUp = false;
         projectionProbePending = true;
         lastFrameNanos = 0L;
+        performanceFrameIndex = 0L;
         mode = safeMode(intent.getStringExtra(EXTRA_MODE));
+        resolution = GameBoyFilter.safeResolution(intent.getStringExtra(EXTRA_RESOLUTION));
         brightness = intent.getIntExtra(EXTRA_BRIGHTNESS, 6);
         contrast = intent.getIntExtra(EXTRA_CONTRAST, 122);
         dither = intent.getBooleanExtra(EXTRA_DITHER, true);
+
+        PerformanceLog.startSession(
+                this,
+                "media_projection",
+                mode,
+                resolution,
+                brightness,
+                contrast,
+                dither,
+                MIN_FRAME_INTERVAL_NS / 1_000_000L
+        );
 
         startProjectionForeground();
 
@@ -247,6 +264,7 @@ public class FilterCaptureService extends Service {
 
         Log.i(TAG, "Capture started: " + captureWidth + "x" + captureHeight
                 + " mode=" + mode
+                + " resolution=" + resolution
                 + " brightness=" + brightness
                 + " contrast=" + contrast
                 + " dither=" + dither
@@ -324,13 +342,14 @@ public class FilterCaptureService extends Service {
                 return;
             }
 
-            long now = System.nanoTime();
+            long frameStartedNs = SystemClock.elapsedRealtimeNanos();
+            long frameIntervalNs = lastFrameNanos == 0L ? 0L : frameStartedNs - lastFrameNanos;
             if (!projectionProbePending
                     && lastFrameNanos != 0L
-                    && now - lastFrameNanos < MIN_FRAME_INTERVAL_NS) {
+                    && frameIntervalNs < MIN_FRAME_INTERVAL_NS) {
                 return;
             }
-            lastFrameNanos = now;
+            lastFrameNanos = frameStartedNs;
 
             Image.Plane plane = image.getPlanes()[0];
             ByteBuffer buffer = plane.getBuffer();
@@ -351,8 +370,10 @@ public class FilterCaptureService extends Service {
                 );
             }
 
+            long bufferCopyStartedNs = SystemClock.elapsedRealtimeNanos();
             buffer.rewind();
             captureBitmap.copyPixelsFromBuffer(buffer);
+            long bufferCopyFinishedNs = SystemClock.elapsedRealtimeNanos();
 
             if (projectionProbePending) {
                 FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
@@ -383,12 +404,10 @@ public class FilterCaptureService extends Service {
                 }
             }
 
-            int targetWidth = GameBoyFilter.getBaseWidth(mode);
-            int targetHeight = GameBoyFilter.getBaseHeight(
-                    mode,
-                    image.getWidth(),
-                    image.getHeight()
-            );
+            int sourceWidth = image.getWidth();
+            int sourceHeight = image.getHeight();
+            int targetWidth = GameBoyFilter.getTargetWidth(resolution, sourceWidth);
+            int targetHeight = GameBoyFilter.getTargetHeight(resolution, sourceHeight);
 
             if (lowResolutionBitmap == null
                     || lowResolutionBitmap.getWidth() != targetWidth
@@ -401,6 +420,7 @@ public class FilterCaptureService extends Service {
                 );
             }
 
+            long downsampleStartedNs = SystemClock.elapsedRealtimeNanos();
             Canvas canvas = new Canvas(lowResolutionBitmap);
             Paint downsamplePaint = new Paint();
             downsamplePaint.setFilterBitmap(false);
@@ -408,11 +428,13 @@ public class FilterCaptureService extends Service {
             canvas.drawColor(Color.BLACK);
             canvas.drawBitmap(
                     captureBitmap,
-                    new Rect(0, 0, image.getWidth(), image.getHeight()),
+                    new Rect(0, 0, sourceWidth, sourceHeight),
                     new Rect(0, 0, targetWidth, targetHeight),
                     downsamplePaint
             );
+            long downsampleFinishedNs = SystemClock.elapsedRealtimeNanos();
 
+            long filterStartedNs = SystemClock.elapsedRealtimeNanos();
             GameBoyFilter.apply(
                     lowResolutionBitmap,
                     mode,
@@ -420,20 +442,55 @@ public class FilterCaptureService extends Service {
                     contrast,
                     dither
             );
+            long filterFinishedNs = SystemClock.elapsedRealtimeNanos();
 
+            long frameCopyStartedNs = SystemClock.elapsedRealtimeNanos();
             Bitmap frameForOverlay = lowResolutionBitmap.copy(Bitmap.Config.ARGB_8888, false);
+            long frameCopyFinishedNs = SystemClock.elapsedRealtimeNanos();
+            long postedNs = SystemClock.elapsedRealtimeNanos();
+            long frameIndex = ++performanceFrameIndex;
+            long bufferCopyNs = bufferCopyFinishedNs - bufferCopyStartedNs;
+            long downsampleNs = downsampleFinishedNs - downsampleStartedNs;
+            long filterNs = filterFinishedNs - filterStartedNs;
+            long frameCopyNs = frameCopyFinishedNs - frameCopyStartedNs;
+
             mainHandler.post(() -> {
+                long mainStartedNs = SystemClock.elapsedRealtimeNanos();
                 FilterAccessibilityService service = FilterAccessibilityService.getInstance();
                 if (service != null) {
                     service.showFrame(frameForOverlay);
+                    long overlayFinishedNs = SystemClock.elapsedRealtimeNanos();
+                    long totalNs = overlayFinishedNs - frameStartedNs;
+                    long mainQueueNs = mainStartedNs - postedNs;
+                    long overlayNs = overlayFinishedNs - mainStartedNs;
+
+                    PerformanceLog.log(
+                            "frame=" + frameIndex
+                                    + " pipeline=media_projection"
+                                    + " mode=" + mode
+                                    + " resolution=" + resolution
+                                    + " source=" + sourceWidth + "x" + sourceHeight
+                                    + " target=" + targetWidth + "x" + targetHeight
+                                    + " frame_interval_ms=" + PerformanceLog.formatMs(frameIntervalNs)
+                                    + " buffer_copy_ms=" + PerformanceLog.formatMs(bufferCopyNs)
+                                    + " downsample_ms=" + PerformanceLog.formatMs(downsampleNs)
+                                    + " filter_ms=" + PerformanceLog.formatMs(filterNs)
+                                    + " frame_copy_ms=" + PerformanceLog.formatMs(frameCopyNs)
+                                    + " main_queue_ms=" + PerformanceLog.formatMs(mainQueueNs)
+                                    + " overlay_ms=" + PerformanceLog.formatMs(overlayNs)
+                                    + " total_ms=" + PerformanceLog.formatMs(totalNs)
+                    );
                 } else {
                     frameForOverlay.recycle();
                     Log.e(TAG, "Accessibility service disconnected while rendering");
+                    PerformanceLog.log("frame_failure pipeline=media_projection stage=overlay_service_disconnected");
                     cleanupAndStop();
                 }
             });
         } catch (Throwable error) {
             Log.e(TAG, "Frame processing failed", error);
+            PerformanceLog.log("frame_failure pipeline=media_projection stage=processing error="
+                    + error.getClass().getSimpleName());
         } finally {
             if (image != null) {
                 image.close();
@@ -507,6 +564,7 @@ public class FilterCaptureService extends Service {
         recycleBitmap(lowResolutionBitmap);
         lowResolutionBitmap = null;
 
+        PerformanceLog.log("session_stop pipeline=media_projection frames=" + performanceFrameIndex);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
         Log.i(TAG, "Capture resources released");

@@ -6,7 +6,13 @@ import android.graphics.Color;
 import java.util.Arrays;
 
 public final class GameBoyFilter {
+    /*
+     * MODE_GB is kept as the legacy wire value used by the existing services.
+     * From v0.1.4 the selectable profiles are GBC / GBA / DS, so this value
+     * represents the Nintendo DS profile.
+     */
     public static final String MODE_GB = "gb";
+    public static final String MODE_DS = MODE_GB;
     public static final String MODE_GBC = "gbc";
     public static final String MODE_GBA = "gba";
 
@@ -30,7 +36,13 @@ public final class GameBoyFilter {
     }
 
     public static int getBaseWidth(String mode) {
-        return MODE_GBA.equals(mode) ? 240 : 160;
+        if (MODE_GBA.equals(mode)) {
+            return 240;
+        }
+        if (MODE_DS.equals(mode)) {
+            return 256;
+        }
+        return 160;
     }
 
     public static void apply(Bitmap bitmap, String mode, int brightness, int contrastValue, boolean dither) {
@@ -40,8 +52,8 @@ public final class GameBoyFilter {
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
         float contrast = contrastValue / 100.0f;
 
-        if (MODE_GB.equals(mode)) {
-            applyGameBoy(pixels, width, height, brightness, contrast, dither);
+        if (MODE_DS.equals(mode)) {
+            applyRgb666(pixels, width, height, brightness, contrast, dither);
         } else {
             applyRgb555(pixels, width, height, brightness, contrast, dither);
             if (MODE_GBC.equals(mode)) {
@@ -116,10 +128,48 @@ public final class GameBoyFilter {
         }
     }
 
+    private static void applyRgb666(
+            int[] pixels,
+            int width,
+            int height,
+            int brightness,
+            float contrast,
+            boolean dither
+    ) {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = y * width + x;
+                int color = pixels[index];
+                float r = ((Color.red(color) - 128.0f) * contrast) + 128.0f + brightness;
+                float g = ((Color.green(color) - 128.0f) * contrast) + 128.0f + brightness;
+                float b = ((Color.blue(color) - 128.0f) * contrast) + 128.0f + brightness;
+
+                if (dither) {
+                    float threshold = (BAYER_4X4[y & 3][x & 3] - 7.5f) * 2.5f;
+                    r += threshold;
+                    g += threshold;
+                    b += threshold;
+                }
+
+                pixels[index] = Color.rgb(
+                        quantizeRgb666(r),
+                        quantizeRgb666(g),
+                        quantizeRgb666(b)
+                );
+            }
+        }
+    }
+
     private static int quantizeRgb555(float value) {
         float clamped = clamp(value, 0.0f, 255.0f);
         int fiveBit = Math.round((clamped / 255.0f) * 31.0f);
         return Math.round((fiveBit / 31.0f) * 255.0f);
+    }
+
+    private static int quantizeRgb666(float value) {
+        float clamped = clamp(value, 0.0f, 255.0f);
+        int sixBit = Math.round((clamped / 255.0f) * 63.0f);
+        return Math.round((sixBit / 63.0f) * 255.0f);
     }
 
     private static void reduceToVisibleColorLimit(int[] pixels, int limit) {

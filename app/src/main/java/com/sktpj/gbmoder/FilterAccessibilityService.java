@@ -229,9 +229,10 @@ public class FilterAccessibilityService extends AccessibilityService {
         Bitmap lowResolutionBitmap = null;
         try {
             int targetWidth = GameBoyFilter.getBaseWidth(windowFilterMode);
-            int targetHeight = Math.max(
-                    1,
-                    Math.round(targetWidth * (source.getHeight() / (float) source.getWidth()))
+            int targetHeight = GameBoyFilter.getBaseHeight(
+                    windowFilterMode,
+                    source.getWidth(),
+                    source.getHeight()
             );
 
             lowResolutionBitmap = Bitmap.createBitmap(
@@ -659,6 +660,9 @@ public class FilterAccessibilityService extends AccessibilityService {
         }
         if (GameBoyFilter.MODE_GBA.equals(requestedMode)) {
             return GameBoyFilter.MODE_GBA;
+        }
+        if (GameBoyFilter.MODE_DS.equals(requestedMode)) {
+            return GameBoyFilter.MODE_DS;
         }
         return GameBoyFilter.MODE_GB;
     }

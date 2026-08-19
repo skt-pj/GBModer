@@ -5,13 +5,15 @@ on:
     branches: [main]
     paths-ignore:
       - 'dist/**'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-apk-main
+  group: build-apk-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -67,7 +69,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish APK or failure evidence into repository
-        if: always()
+        if: always() && github.event_name == 'push'
         run: |
           mkdir -p dist
           if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f app/build/outputs/apk/debug/app-debug.apk ]; then

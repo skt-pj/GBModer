@@ -94,6 +94,11 @@ public class MainActivity extends Activity {
                 "GBC / 160×144",
                 "GBA / 240×160",
                 "DS / 256×192",
+                "端末比 / 25%",
+                "端末比 / 33%",
+                "端末比 / 50%",
+                "端末比 / 67%",
+                "端末比 / 75%",
                 "スマホの元解像度"
         };
         ArrayAdapter<String> resolutionAdapter = new ArrayAdapter<>(
@@ -106,7 +111,7 @@ public class MainActivity extends Activity {
         root.addView(resolutionSpinner, matchWrap());
 
         TextView combinationNote = text(
-                "表示モードの色・階調処理と、解像度の出力サイズを組み合わせて適用します。",
+                "表示モードの色・階調処理と、解像度の出力サイズを組み合わせて適用します。DSより上の端末比は取得画面の縦横比を維持したまま縮小します。",
                 12,
                 false
         );
@@ -436,7 +441,12 @@ public class MainActivity extends Activity {
         if (position == 1) return GameBoyFilter.RESOLUTION_GBC;
         if (position == 2) return GameBoyFilter.RESOLUTION_GBA;
         if (position == 3) return GameBoyFilter.RESOLUTION_DS;
-        if (position == 4) return GameBoyFilter.RESOLUTION_NATIVE;
+        if (position == 4) return GameBoyFilter.RESOLUTION_PHONE_25;
+        if (position == 5) return GameBoyFilter.RESOLUTION_PHONE_33;
+        if (position == 6) return GameBoyFilter.RESOLUTION_PHONE_50;
+        if (position == 7) return GameBoyFilter.RESOLUTION_PHONE_67;
+        if (position == 8) return GameBoyFilter.RESOLUTION_PHONE_75;
+        if (position == 9) return GameBoyFilter.RESOLUTION_NATIVE;
         return GameBoyFilter.RESOLUTION_GB;
     }
 

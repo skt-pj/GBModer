@@ -1,26 +1,35 @@
 package com.sktpj.gbmoder;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Spinner;
-import android.widget.ArrayAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
 public class MainActivity extends Activity {
+    private static final String TAG = "GBModerMain";
     private static final int REQUEST_OVERLAY = 1001;
     private static final int REQUEST_CAPTURE = 1002;
+    private static final int REQUEST_NOTIFICATIONS = 1003;
 
     private MediaProjectionManager projectionManager;
     private Spinner modeSpinner;
@@ -31,6 +40,7 @@ public class MainActivity extends Activity {
     private TextView contrastValue;
     private TextView statusText;
     private boolean pendingStartAfterOverlay = false;
+    private boolean pendingStartAfterNotification = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,7 +117,9 @@ public class MainActivity extends Activity {
         Button stopButton = new Button(this);
         stopButton.setText("停止");
         stopButton.setOnClickListener(v -> {
-            stopService(new Intent(this, FilterCaptureService.class));
+            Intent stopIntent = new Intent(this, FilterCaptureService.class);
+            stopIntent.setAction(FilterCaptureService.ACTION_STOP);
+            startService(stopIntent);
             statusText.setText("停止しました");
         });
         LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -120,8 +132,9 @@ public class MainActivity extends Activity {
         root.addView(statusText, matchWrap());
 
         TextView note = text(
-                "画面全体共有を選ぶとGBModerのオーバーレイ自身がキャプチャ対象に含まれるため、単一アプリ共有を使用してください。" +
-                        " DRM/FLAG_SECURE等で保護された画面は取得できません。",
+                "画面全体共有ではGBModer自身の表示が再キャプチャされるため使用しません。" +
+                        " Android 17以降では全画面共有を選択肢から除外し、Android 14〜16では共有画面で必ず「1つのアプリ」を選択してください。" +
+                        " 通知欄の「解除」からいつでも停止できます。 DRM/FLAG_SECURE等で保護された画面は取得できません。",
                 12,
                 false
         );
@@ -132,6 +145,22 @@ public class MainActivity extends Activity {
     }
 
     private void beginStartFlow() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            pendingStartAfterNotification = true;
+            requestPermissions(
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    REQUEST_NOTIFICATIONS
+            );
+            statusText.setText("通知欄に解除を表示するため通知を許可してください");
+            return;
+        }
+
+        beginOverlayFlow();
+    }
+
+    private void beginOverlayFlow() {
+        pendingStartAfterNotification = false;
         if (!Settings.canDrawOverlays(this)) {
             pendingStartAfterOverlay = true;
             Intent overlayIntent = new Intent(
@@ -148,7 +177,52 @@ public class MainActivity extends Activity {
     private void requestScreenCapture() {
         pendingStartAfterOverlay = false;
         statusText.setText("共有する他アプリを選択してください");
-        startActivityForResult(projectionManager.createScreenCaptureIntent(), REQUEST_CAPTURE);
+        startActivityForResult(createSingleAppPreferredCaptureIntent(), REQUEST_CAPTURE);
+    }
+
+    private Intent createSingleAppPreferredCaptureIntent() {
+        if (Build.VERSION.SDK_INT >= 37) {
+            try {
+                Class<?> configClass = Class.forName("android.media.projection.MediaProjectionConfig");
+                Class<?> builderClass = Class.forName("android.media.projection.MediaProjectionConfig$Builder");
+                Object builder = builderClass.getDeclaredConstructor().newInstance();
+
+                Field displayField = configClass.getField("PROJECTION_SOURCE_DISPLAY");
+                Field appField = configClass.getField("PROJECTION_SOURCE_APP");
+                int displaySource = displayField.getInt(null);
+                int appSource = appField.getInt(null);
+
+                Method setSourceEnabled = builderClass.getMethod(
+                        "setSourceEnabled",
+                        int.class,
+                        boolean.class
+                );
+                setSourceEnabled.invoke(builder, displaySource, false);
+                setSourceEnabled.invoke(builder, appSource, true);
+
+                Method setInitiallySelectedSource = builderClass.getMethod(
+                        "setInitiallySelectedSource",
+                        int.class
+                );
+                setInitiallySelectedSource.invoke(builder, appSource);
+
+                Object config = builderClass.getMethod("build").invoke(builder);
+                Method createIntent = MediaProjectionManager.class.getMethod(
+                        "createScreenCaptureIntent",
+                        configClass
+                );
+                Intent intent = (Intent) createIntent.invoke(projectionManager, config);
+                if (intent != null) {
+                    Log.i(TAG, "MediaProjection picker restricted to single-app source");
+                    return intent;
+                }
+            } catch (Throwable error) {
+                Log.w(TAG, "Single-app-only picker unavailable; using user-choice picker", error);
+            }
+        }
+
+        Log.i(TAG, "MediaProjection user-choice picker; select one app, not entire display");
+        return projectionManager.createScreenCaptureIntent();
     }
 
     @Override
@@ -156,6 +230,24 @@ public class MainActivity extends Activity {
         super.onResume();
         if (pendingStartAfterOverlay && Settings.canDrawOverlays(this)) {
             requestScreenCapture();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode != REQUEST_NOTIFICATIONS) {
+            return;
+        }
+
+        boolean granted = grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        if (granted && pendingStartAfterNotification) {
+            beginOverlayFlow();
+        } else {
+            pendingStartAfterNotification = false;
+            statusText.setText("通知欄の解除を使うため通知権限が必要です");
         }
     }
 

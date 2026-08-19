@@ -6,11 +6,19 @@ def generatedGpuSourceDir = file("$buildDir/generated/gbmoderGpu/java")
 def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.dir('src/main/java')
     inputs.file(rootProject.file('tools/prepare_gpu_source.py'))
+    inputs.file(rootProject.file('tools/finish_gpu_source_v015.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_gpu_source.py').absolutePath,
             file('src/main/java').absolutePath,
             generatedGpuSourceDir.absolutePath
+    doLast {
+        project.exec {
+            commandLine 'python3',
+                    rootProject.file('tools/finish_gpu_source_v015.py').absolutePath,
+                    generatedGpuSourceDir.absolutePath
+        }
+    }
 }
 
 android {

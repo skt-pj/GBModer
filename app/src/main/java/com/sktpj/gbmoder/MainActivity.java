@@ -36,6 +36,7 @@ public class MainActivity extends Activity {
 
     private MediaProjectionManager projectionManager;
     private Spinner modeSpinner;
+    private Spinner resolutionSpinner;
     private SeekBar brightnessSeek;
     private SeekBar contrastSeek;
     private Switch ditherSwitch;
@@ -73,15 +74,35 @@ public class MainActivity extends Activity {
         root.addView(text("表示モード", 14, true), matchWrap());
         modeSpinner = new Spinner(this);
         String[] modes = {
-                "Game Boy / 160×144 / 4階調",
-                "Game Boy Color / 160×144 / 32,768色・同時56色",
-                "Game Boy Advance / 240×160 / 32,768色",
-                "Nintendo DS / 256×192 / 26万色"
+                "Game Boy / 4階調",
+                "Game Boy Color / 32,768色・同時56色",
+                "Game Boy Advance / 32,768色",
+                "Nintendo DS / 26万色"
         };
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, modes);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        modeSpinner.setAdapter(adapter);
+        ArrayAdapter<String> modeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, modes);
+        modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        modeSpinner.setAdapter(modeAdapter);
         root.addView(modeSpinner, matchWrap());
+
+        TextView resolutionLabel = text("解像度", 14, true);
+        resolutionLabel.setPadding(0, dp(16), 0, 0);
+        root.addView(resolutionLabel, matchWrap());
+        resolutionSpinner = new Spinner(this);
+        String[] resolutions = {
+                "GB / 160×144",
+                "GBC / 160×144",
+                "GBA / 240×160",
+                "DS / 256×192",
+                "スマホの元解像度"
+        };
+        ArrayAdapter<String> resolutionAdapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                resolutions
+        );
+        resolutionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        resolutionSpinner.setAdapter(resolutionAdapter);
+        root.addView(resolutionSpinner, matchWrap());
 
         brightnessValue = text("明るさ: 6", 14, false);
         brightnessValue.setPadding(0, dp(16), 0, 0);
@@ -197,6 +218,7 @@ public class MainActivity extends Activity {
 
             accessibilityService.startWindowFilter(
                     getSelectedMode(),
+                    getSelectedResolution(),
                     getBrightness(),
                     getContrast(),
                     ditherSwitch.isChecked()
@@ -346,6 +368,7 @@ public class MainActivity extends Activity {
         serviceIntent.putExtra(FilterCaptureService.EXTRA_RESULT_CODE, resultCode);
         serviceIntent.putExtra(FilterCaptureService.EXTRA_RESULT_DATA, data);
         serviceIntent.putExtra(FilterCaptureService.EXTRA_MODE, getSelectedMode());
+        serviceIntent.putExtra(FilterCaptureService.EXTRA_RESOLUTION, getSelectedResolution());
         serviceIntent.putExtra(FilterCaptureService.EXTRA_BRIGHTNESS, getBrightness());
         serviceIntent.putExtra(FilterCaptureService.EXTRA_CONTRAST, getContrast());
         serviceIntent.putExtra(FilterCaptureService.EXTRA_DITHER, ditherSwitch.isChecked());
@@ -359,6 +382,15 @@ public class MainActivity extends Activity {
         if (position == 2) return GameBoyFilter.MODE_GBA;
         if (position == 3) return GameBoyFilter.MODE_DS;
         return GameBoyFilter.MODE_GB;
+    }
+
+    private String getSelectedResolution() {
+        int position = resolutionSpinner.getSelectedItemPosition();
+        if (position == 1) return GameBoyFilter.RESOLUTION_GBC;
+        if (position == 2) return GameBoyFilter.RESOLUTION_GBA;
+        if (position == 3) return GameBoyFilter.RESOLUTION_DS;
+        if (position == 4) return GameBoyFilter.RESOLUTION_NATIVE;
+        return GameBoyFilter.RESOLUTION_GB;
     }
 
     private int getBrightness() {

@@ -37,12 +37,12 @@ public final class GameBoyFilter {
 
     public static int getBaseWidth(String mode) {
         if (MODE_GBA.equals(mode)) {
-            return 240;
+            return 480;
         }
         if (MODE_DS.equals(mode)) {
-            return 256;
+            return 512;
         }
-        return 160;
+        return 320;
     }
 
     public static void apply(Bitmap bitmap, String mode, int brightness, int contrastValue, boolean dither) {

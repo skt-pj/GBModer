@@ -11,6 +11,12 @@ public final class GameBoyFilter {
     public static final String MODE_GBC = "gbc";
     public static final String MODE_GBA = "gba";
 
+    public static final String RESOLUTION_GB = "gb";
+    public static final String RESOLUTION_GBC = "gbc";
+    public static final String RESOLUTION_GBA = "gba";
+    public static final String RESOLUTION_DS = "ds";
+    public static final String RESOLUTION_NATIVE = "native";
+
     private static final int GBC_COLOR_LIMIT = 56;
 
     private static final int[][] GB_PALETTE = {
@@ -30,22 +36,56 @@ public final class GameBoyFilter {
     private GameBoyFilter() {
     }
 
-    public static int getBaseWidth(String mode) {
-        if (MODE_GBA.equals(mode)) {
+    public static String safeResolution(String requestedResolution) {
+        if (RESOLUTION_GBC.equals(requestedResolution)) {
+            return RESOLUTION_GBC;
+        }
+        if (RESOLUTION_GBA.equals(requestedResolution)) {
+            return RESOLUTION_GBA;
+        }
+        if (RESOLUTION_DS.equals(requestedResolution)) {
+            return RESOLUTION_DS;
+        }
+        if (RESOLUTION_NATIVE.equals(requestedResolution)) {
+            return RESOLUTION_NATIVE;
+        }
+        return RESOLUTION_GB;
+    }
+
+    public static int getTargetWidth(String resolution, int sourceWidth) {
+        String safeResolution = safeResolution(resolution);
+        if (RESOLUTION_GBA.equals(safeResolution)) {
             return 240;
         }
-        if (MODE_DS.equals(mode)) {
+        if (RESOLUTION_DS.equals(safeResolution)) {
             return 256;
+        }
+        if (RESOLUTION_NATIVE.equals(safeResolution)) {
+            return Math.max(1, sourceWidth);
         }
         return 160;
     }
 
+    public static int getTargetHeight(String resolution, int sourceHeight) {
+        String safeResolution = safeResolution(resolution);
+        if (RESOLUTION_GBA.equals(safeResolution)) {
+            return 160;
+        }
+        if (RESOLUTION_DS.equals(safeResolution)) {
+            return 192;
+        }
+        if (RESOLUTION_NATIVE.equals(safeResolution)) {
+            return Math.max(1, sourceHeight);
+        }
+        return 144;
+    }
+
+    public static int getBaseWidth(String mode) {
+        return getTargetWidth(mode, 1);
+    }
+
     public static int getBaseHeight(String mode, int sourceWidth, int sourceHeight) {
-        int targetWidth = getBaseWidth(mode);
-        return Math.max(
-                1,
-                Math.round(targetWidth * (sourceHeight / (float) Math.max(1, sourceWidth)))
-        );
+        return getTargetHeight(mode, sourceHeight);
     }
 
     public static void apply(Bitmap bitmap, String mode, int brightness, int contrastValue, boolean dither) {

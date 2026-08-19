@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -18,6 +19,7 @@ public final class PerformanceLog {
     private static final String TAG = "GBModerPerf";
     private static final Object LOCK = new Object();
     private static final String FILE_NAME = "gbmoder-performance.log";
+    private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
 
     private static HandlerThread logThread;
     private static Handler logHandler;
@@ -84,28 +86,28 @@ public final class PerformanceLog {
 
     public static void syncToUri(Context context, Uri destination, SyncCallback callback) {
         if (context == null || destination == null) {
-            dispatchSyncResult(context, callback, false, "同期先がありません");
+            dispatchSyncResult(callback, false, "同期先がありません");
             return;
         }
 
         ensureThread();
         Handler handler = logHandler;
         if (handler == null) {
-            dispatchSyncResult(context, callback, false, "ログ処理を開始できません");
+            dispatchSyncResult(callback, false, "ログ処理を開始できません");
             return;
         }
 
         handler.post(() -> {
             File file = resolveLogFile(context);
             if (!file.isFile() || file.length() <= 0L) {
-                dispatchSyncResult(context, callback, false, "同期するログがありません");
+                dispatchSyncResult(callback, false, "同期するログがありません");
                 return;
             }
 
             try (FileInputStream input = new FileInputStream(file);
                  OutputStream output = context.getContentResolver().openOutputStream(destination, "wt")) {
                 if (output == null) {
-                    dispatchSyncResult(context, callback, false, "同期先を開けません");
+                    dispatchSyncResult(callback, false, "同期先を開けません");
                     return;
                 }
 
@@ -118,10 +120,10 @@ public final class PerformanceLog {
                 }
                 output.flush();
                 Log.i(TAG, "Performance log synced to selected document");
-                dispatchSyncResult(context, callback, true, "");
+                dispatchSyncResult(callback, true, "");
             } catch (IOException error) {
                 Log.e(TAG, "Failed to sync performance log", error);
-                dispatchSyncResult(context, callback, false, error.getClass().getSimpleName());
+                dispatchSyncResult(callback, false, error.getClass().getSimpleName());
             }
         });
     }
@@ -142,7 +144,6 @@ public final class PerformanceLog {
     }
 
     private static void dispatchSyncResult(
-            Context context,
             SyncCallback callback,
             boolean success,
             String errorMessage
@@ -150,11 +151,7 @@ public final class PerformanceLog {
         if (callback == null) {
             return;
         }
-        if (context == null) {
-            callback.onComplete(success, errorMessage);
-            return;
-        }
-        context.getMainExecutor().execute(() -> callback.onComplete(success, errorMessage));
+        MAIN_HANDLER.post(() -> callback.onComplete(success, errorMessage));
     }
 
     private static void ensureThread() {

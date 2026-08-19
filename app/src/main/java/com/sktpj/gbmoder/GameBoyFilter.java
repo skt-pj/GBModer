@@ -7,16 +7,13 @@ import android.graphics.Color;
 import java.util.Arrays;
 
 public final class GameBoyFilter {
-    /*
-     * MODE_GB is kept as the legacy wire value used by the existing services.
-     * From v0.1.4 the selectable profiles are GBC / GBA / DS, so this value
-     * represents the Nintendo DS profile.
-     */
     public static final String MODE_GB = "gb";
-    public static final String MODE_DS = MODE_GB;
+    public static final String MODE_DS = "ds";
     public static final String MODE_GBC = "gbc";
     public static final String MODE_GBA = "gba";
 
+    private static final int GB_WIDTH = 160;
+    private static final int GB_HEIGHT = 144;
     private static final int GBC_COLOR_LIMIT = 56;
     private static final float DITHER_PROTECT_DARK = 32.0f;
     private static final float DITHER_PROTECT_LIGHT = 223.0f;
@@ -39,8 +36,22 @@ public final class GameBoyFilter {
     }
 
     public static int getBaseWidth(String mode) {
+        if (MODE_GB.equals(mode)) {
+            return GB_WIDTH;
+        }
         int displayWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
         return Math.max(1, displayWidth);
+    }
+
+    public static int getBaseHeight(String mode, int sourceWidth, int sourceHeight) {
+        if (MODE_GB.equals(mode)) {
+            return GB_HEIGHT;
+        }
+        int targetWidth = getBaseWidth(mode);
+        return Math.max(
+                1,
+                Math.round(targetWidth * (sourceHeight / (float) Math.max(1, sourceWidth)))
+        );
     }
 
     public static void apply(Bitmap bitmap, String mode, int brightness, int contrastValue, boolean dither) {
@@ -50,7 +61,9 @@ public final class GameBoyFilter {
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
         float contrast = contrastValue / 100.0f;
 
-        if (MODE_DS.equals(mode)) {
+        if (MODE_GB.equals(mode)) {
+            applyGameBoy(pixels, width, height, brightness, contrast, dither);
+        } else if (MODE_DS.equals(mode)) {
             applyRgb666(pixels, width, height, brightness, contrast, dither);
         } else {
             applyRgb555(pixels, width, height, brightness, contrast, dither);
@@ -81,7 +94,7 @@ public final class GameBoyFilter {
                 float lum = (0.299f * r) + (0.587f * g) + (0.114f * b);
                 lum = ((lum - 128.0f) * contrast) + 128.0f + brightness;
 
-                if (dither && shouldApplyDither(lum)) {
+                if (dither) {
                     float threshold = (BAYER_4X4[y & 3][x & 3] - 7.5f) * 7.0f;
                     lum += threshold;
                 }

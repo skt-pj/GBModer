@@ -37,6 +37,10 @@
             android:name=".FilterCaptureService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+
+        <receiver
+            android:name=".FilterControlReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

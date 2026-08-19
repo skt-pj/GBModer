@@ -15,6 +15,11 @@ public final class GameBoyFilter {
     public static final String RESOLUTION_GBC = "gbc";
     public static final String RESOLUTION_GBA = "gba";
     public static final String RESOLUTION_DS = "ds";
+    public static final String RESOLUTION_PHONE_25 = "phone_25";
+    public static final String RESOLUTION_PHONE_33 = "phone_33";
+    public static final String RESOLUTION_PHONE_50 = "phone_50";
+    public static final String RESOLUTION_PHONE_67 = "phone_67";
+    public static final String RESOLUTION_PHONE_75 = "phone_75";
     public static final String RESOLUTION_NATIVE = "native";
 
     private static final int GBC_COLOR_LIMIT = 56;
@@ -46,6 +51,21 @@ public final class GameBoyFilter {
         if (RESOLUTION_DS.equals(requestedResolution)) {
             return RESOLUTION_DS;
         }
+        if (RESOLUTION_PHONE_25.equals(requestedResolution)) {
+            return RESOLUTION_PHONE_25;
+        }
+        if (RESOLUTION_PHONE_33.equals(requestedResolution)) {
+            return RESOLUTION_PHONE_33;
+        }
+        if (RESOLUTION_PHONE_50.equals(requestedResolution)) {
+            return RESOLUTION_PHONE_50;
+        }
+        if (RESOLUTION_PHONE_67.equals(requestedResolution)) {
+            return RESOLUTION_PHONE_67;
+        }
+        if (RESOLUTION_PHONE_75.equals(requestedResolution)) {
+            return RESOLUTION_PHONE_75;
+        }
         if (RESOLUTION_NATIVE.equals(requestedResolution)) {
             return RESOLUTION_NATIVE;
         }
@@ -59,6 +79,10 @@ public final class GameBoyFilter {
         }
         if (RESOLUTION_DS.equals(safeResolution)) {
             return 256;
+        }
+        float phoneScale = getPhoneScale(safeResolution);
+        if (phoneScale > 0.0f) {
+            return scaledDimension(sourceWidth, phoneScale);
         }
         if (RESOLUTION_NATIVE.equals(safeResolution)) {
             return Math.max(1, sourceWidth);
@@ -74,10 +98,27 @@ public final class GameBoyFilter {
         if (RESOLUTION_DS.equals(safeResolution)) {
             return 192;
         }
+        float phoneScale = getPhoneScale(safeResolution);
+        if (phoneScale > 0.0f) {
+            return scaledDimension(sourceHeight, phoneScale);
+        }
         if (RESOLUTION_NATIVE.equals(safeResolution)) {
             return Math.max(1, sourceHeight);
         }
         return 144;
+    }
+
+    private static float getPhoneScale(String resolution) {
+        if (RESOLUTION_PHONE_25.equals(resolution)) return 0.25f;
+        if (RESOLUTION_PHONE_33.equals(resolution)) return 1.0f / 3.0f;
+        if (RESOLUTION_PHONE_50.equals(resolution)) return 0.50f;
+        if (RESOLUTION_PHONE_67.equals(resolution)) return 2.0f / 3.0f;
+        if (RESOLUTION_PHONE_75.equals(resolution)) return 0.75f;
+        return 0.0f;
+    }
+
+    private static int scaledDimension(int sourceDimension, float scale) {
+        return Math.max(1, Math.round(Math.max(1, sourceDimension) * scale));
     }
 
     public static void apply(Bitmap bitmap, String mode, int brightness, int contrastValue, boolean dither) {

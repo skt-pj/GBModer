@@ -1,13 +1,24 @@
 package com.sktpj.gbmoder;
 
 import android.accessibilityservice.AccessibilityService;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorSpace;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.hardware.HardwareBuffer;
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -21,6 +32,9 @@ import java.util.List;
 public class FilterAccessibilityService extends AccessibilityService {
     private static final String TAG = "GBModerAccessibility";
     private static final String SYSTEM_UI_PACKAGE = "com.android.systemui";
+    private static final String CHANNEL_ID = "gbmoder_filter";
+    private static final int NOTIFICATION_ID = 4101;
+    private static final long WINDOW_CAPTURE_INTERVAL_MS = 350L;
 
     private static final int PROBE_TOP_LEFT = Color.rgb(255, 0, 255);
     private static final int PROBE_TOP_RIGHT = Color.rgb(0, 255, 255);
@@ -30,12 +44,24 @@ public class FilterAccessibilityService extends AccessibilityService {
 
     private static volatile FilterAccessibilityService instance;
 
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable captureRunnable = this::captureActiveWindow;
+
     private WindowManager windowManager;
     private FilterOverlayView overlayView;
     private WindowManager.LayoutParams overlayParams;
-    private Rect overlayBounds = new Rect();
+    private final Rect overlayBounds = new Rect();
     private boolean captureVisible = true;
     private boolean systemUiForeground = false;
+
+    private HandlerThread filterThread;
+    private Handler filterHandler;
+    private boolean windowFilterRunning = false;
+    private boolean screenshotInFlight = false;
+    private String windowFilterMode = GameBoyFilter.MODE_GB;
+    private int windowFilterBrightness = 6;
+    private int windowFilterContrast = 122;
+    private boolean windowFilterDither = true;
 
     public static FilterAccessibilityService getInstance() {
         return instance;
@@ -46,20 +72,283 @@ public class FilterAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         instance = this;
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        createNotificationChannel();
         Log.i(TAG, "Accessibility overlay service connected");
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (overlayView == null) {
-            return;
-        }
         updateSystemUiVisibility();
-        updateOverlayBoundsIfNeeded();
+        if (overlayView != null && !windowFilterRunning) {
+            updateOverlayBoundsIfNeeded();
+        }
     }
 
     @Override
     public void onInterrupt() {
+    }
+
+    public void startWindowFilter(String mode, int brightness, int contrast, boolean dither) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            Log.w(TAG, "Window screenshot filter requires Android 14+");
+            return;
+        }
+
+        windowFilterMode = safeMode(mode);
+        windowFilterBrightness = brightness;
+        windowFilterContrast = contrast;
+        windowFilterDither = dither;
+        windowFilterRunning = true;
+        screenshotInFlight = false;
+        captureVisible = true;
+
+        ensureFilterThread();
+        showFilterNotification();
+        mainHandler.removeCallbacks(captureRunnable);
+        mainHandler.post(captureRunnable);
+
+        Log.i(TAG, "Window filter started mode=" + windowFilterMode
+                + " brightness=" + windowFilterBrightness
+                + " contrast=" + windowFilterContrast
+                + " dither=" + windowFilterDither
+                + " source=takeScreenshotOfWindow");
+    }
+
+    public void stopWindowFilter() {
+        windowFilterRunning = false;
+        screenshotInFlight = false;
+        mainHandler.removeCallbacks(captureRunnable);
+        removeOverlayInternal();
+        cancelFilterNotification();
+        Log.i(TAG, "Window filter stopped");
+    }
+
+    public boolean isWindowFilterRunning() {
+        return windowFilterRunning;
+    }
+
+    private void captureActiveWindow() {
+        if (!windowFilterRunning || Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return;
+        }
+        if (screenshotInFlight) {
+            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+            return;
+        }
+
+        updateSystemUiVisibility();
+        if (systemUiForeground) {
+            setCaptureVisible(false);
+            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+            return;
+        }
+
+        TargetWindow target = resolveActiveApplicationWindow();
+        if (target == null) {
+            setCaptureVisible(false);
+            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+            return;
+        }
+
+        screenshotInFlight = true;
+        long requestStartedAt = System.currentTimeMillis();
+        Log.d(TAG, "Window screenshot requested id=" + target.windowId
+                + " package=" + target.packageName
+                + " bounds=" + target.bounds);
+
+        takeScreenshotOfWindow(
+                target.windowId,
+                getMainExecutor(),
+                new TakeScreenshotCallback() {
+                    @Override
+                    public void onSuccess(ScreenshotResult screenshot) {
+                        screenshotInFlight = false;
+                        Bitmap softwareBitmap = copyScreenshotToSoftwareBitmap(screenshot);
+                        if (softwareBitmap == null) {
+                            Log.e(TAG, "Window screenshot returned no bitmap package=" + target.packageName);
+                            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+                            return;
+                        }
+
+                        ensureFilterThread();
+                        Handler handler = filterHandler;
+                        if (handler == null) {
+                            softwareBitmap.recycle();
+                            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+                            return;
+                        }
+
+                        handler.post(() -> processWindowScreenshot(
+                                softwareBitmap,
+                                target,
+                                requestStartedAt
+                        ));
+                    }
+
+                    @Override
+                    public void onFailure(int errorCode) {
+                        screenshotInFlight = false;
+                        Log.w(TAG, "Window screenshot failed code=" + errorCode
+                                + " package=" + target.packageName);
+                        setCaptureVisible(false);
+                        long retryDelay = errorCode == ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT
+                                ? 120L
+                                : WINDOW_CAPTURE_INTERVAL_MS;
+                        scheduleNextWindowCapture(retryDelay);
+                    }
+                }
+        );
+    }
+
+    private Bitmap copyScreenshotToSoftwareBitmap(ScreenshotResult screenshot) {
+        if (screenshot == null) {
+            return null;
+        }
+
+        HardwareBuffer hardwareBuffer = screenshot.getHardwareBuffer();
+        if (hardwareBuffer == null) {
+            return null;
+        }
+
+        try {
+            ColorSpace colorSpace = screenshot.getColorSpace();
+            if (colorSpace == null) {
+                colorSpace = ColorSpace.get(ColorSpace.Named.SRGB);
+            }
+            Bitmap hardwareBitmap = Bitmap.wrapHardwareBuffer(hardwareBuffer, colorSpace);
+            if (hardwareBitmap == null) {
+                return null;
+            }
+            return hardwareBitmap.copy(Bitmap.Config.ARGB_8888, false);
+        } finally {
+            hardwareBuffer.close();
+        }
+    }
+
+    private void processWindowScreenshot(Bitmap source, TargetWindow target, long requestStartedAt) {
+        Bitmap lowResolutionBitmap = null;
+        try {
+            int targetWidth = GameBoyFilter.getBaseWidth(windowFilterMode);
+            int targetHeight = Math.max(
+                    1,
+                    Math.round(targetWidth * (source.getHeight() / (float) source.getWidth()))
+            );
+
+            lowResolutionBitmap = Bitmap.createBitmap(
+                    targetWidth,
+                    targetHeight,
+                    Bitmap.Config.ARGB_8888
+            );
+
+            Canvas canvas = new Canvas(lowResolutionBitmap);
+            Paint downsamplePaint = new Paint();
+            downsamplePaint.setFilterBitmap(false);
+            downsamplePaint.setAntiAlias(false);
+            canvas.drawColor(Color.BLACK);
+            canvas.drawBitmap(
+                    source,
+                    new Rect(0, 0, source.getWidth(), source.getHeight()),
+                    new Rect(0, 0, targetWidth, targetHeight),
+                    downsamplePaint
+            );
+
+            GameBoyFilter.apply(
+                    lowResolutionBitmap,
+                    windowFilterMode,
+                    windowFilterBrightness,
+                    windowFilterContrast,
+                    windowFilterDither
+            );
+
+            Bitmap frame = lowResolutionBitmap;
+            lowResolutionBitmap = null;
+            mainHandler.post(() -> {
+                if (!windowFilterRunning) {
+                    frame.recycle();
+                    return;
+                }
+                showFrame(frame, target.bounds);
+                long elapsed = System.currentTimeMillis() - requestStartedAt;
+                long delay = Math.max(0L, WINDOW_CAPTURE_INTERVAL_MS - elapsed);
+                scheduleNextWindowCapture(delay);
+            });
+        } catch (Throwable error) {
+            Log.e(TAG, "Window frame processing failed", error);
+            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+        } finally {
+            source.recycle();
+            if (lowResolutionBitmap != null && !lowResolutionBitmap.isRecycled()) {
+                lowResolutionBitmap.recycle();
+            }
+        }
+    }
+
+    private void scheduleNextWindowCapture(long delayMs) {
+        if (!windowFilterRunning) {
+            return;
+        }
+        mainHandler.removeCallbacks(captureRunnable);
+        mainHandler.postDelayed(captureRunnable, Math.max(0L, delayMs));
+    }
+
+    private void ensureFilterThread() {
+        if (filterThread != null && filterThread.isAlive() && filterHandler != null) {
+            return;
+        }
+        filterThread = new HandlerThread("GBModerWindowFilterThread");
+        filterThread.start();
+        filterHandler = new Handler(filterThread.getLooper());
+    }
+
+    private TargetWindow resolveActiveApplicationWindow() {
+        List<AccessibilityWindowInfo> windows = getWindows();
+        if (windows == null) {
+            return null;
+        }
+
+        TargetWindow fallback = null;
+        for (AccessibilityWindowInfo window : windows) {
+            if (window == null || window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) {
+                continue;
+            }
+
+            AccessibilityNodeInfo root = null;
+            try {
+                root = window.getRoot();
+                CharSequence packageNameSequence = root == null ? null : root.getPackageName();
+                String packageName = packageNameSequence == null
+                        ? null
+                        : packageNameSequence.toString();
+
+                if (getPackageName().equals(packageName) || SYSTEM_UI_PACKAGE.equals(packageName)) {
+                    continue;
+                }
+
+                Rect bounds = new Rect();
+                window.getBoundsInScreen(bounds);
+                if (bounds.isEmpty()) {
+                    continue;
+                }
+
+                TargetWindow candidate = new TargetWindow(
+                        window.getId(),
+                        bounds,
+                        packageName == null ? "unknown" : packageName
+                );
+
+                if (window.isActive() || window.isFocused()) {
+                    return candidate;
+                }
+                if (fallback == null) {
+                    fallback = candidate;
+                }
+            } finally {
+                if (root != null) {
+                    root.recycle();
+                }
+            }
+        }
+        return fallback;
     }
 
     public void prepareProbe() {
@@ -78,6 +367,17 @@ public class FilterAccessibilityService extends AccessibilityService {
             ensureOverlay();
             updateOverlayBoundsIfNeeded();
             overlayView.setFrame(frame);
+            updateOverlayVisibility();
+        });
+    }
+
+    private void showFrame(Bitmap frame, Rect bounds) {
+        runOnMain(() -> {
+            ensureOverlay();
+            applyBoundsAndUpdateIfNeeded(bounds);
+            captureVisible = true;
+            overlayView.setFrame(frame);
+            updateSystemUiVisibility();
             updateOverlayVisibility();
         });
     }
@@ -166,32 +466,50 @@ public class FilterAccessibilityService extends AccessibilityService {
         windowManager.addView(overlayView, overlayParams);
         updateSystemUiVisibility();
         updateOverlayVisibility();
-        Log.i(TAG, "Opaque trusted overlay added alpha=1.0 bounds=" + overlayBounds);
+        Log.i(TAG, "Opaque accessibility overlay added alpha=1.0 bounds=" + overlayBounds);
     }
 
     private void updateOverlayBoundsIfNeeded() {
         if (overlayView == null || overlayParams == null || windowManager == null) {
             return;
         }
+        applyBoundsAndUpdateIfNeeded(resolveActiveApplicationBounds());
+    }
 
-        Rect newBounds = resolveActiveApplicationBounds();
+    private void applyBoundsAndUpdateIfNeeded(Rect newBounds) {
+        if (overlayView == null || overlayParams == null || windowManager == null) {
+            return;
+        }
+
+        Rect safeBounds = sanitizeBounds(newBounds);
         synchronized (this) {
-            if (overlayBounds.equals(newBounds)) {
+            if (overlayBounds.equals(safeBounds)) {
                 return;
             }
         }
 
-        applyBounds(newBounds);
+        applyBounds(safeBounds);
         try {
             windowManager.updateViewLayout(overlayView, overlayParams);
-            Log.i(TAG, "Overlay bounds updated=" + newBounds);
+            Log.i(TAG, "Overlay bounds updated=" + safeBounds);
         } catch (Throwable error) {
             Log.e(TAG, "Failed to update overlay bounds", error);
         }
     }
 
     private void applyBounds(Rect bounds) {
-        Rect safeBounds = new Rect(bounds);
+        Rect safeBounds = sanitizeBounds(bounds);
+        synchronized (this) {
+            overlayBounds.set(safeBounds);
+        }
+        overlayParams.width = Math.max(1, safeBounds.width());
+        overlayParams.height = Math.max(1, safeBounds.height());
+        overlayParams.x = safeBounds.left;
+        overlayParams.y = safeBounds.top;
+    }
+
+    private Rect sanitizeBounds(Rect bounds) {
+        Rect safeBounds = bounds == null ? new Rect() : new Rect(bounds);
         if (safeBounds.isEmpty()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 safeBounds = windowManager.getMaximumWindowMetrics().getBounds();
@@ -204,48 +522,13 @@ public class FilterAccessibilityService extends AccessibilityService {
                 );
             }
         }
-
-        synchronized (this) {
-            overlayBounds.set(safeBounds);
-        }
-        overlayParams.width = Math.max(1, safeBounds.width());
-        overlayParams.height = Math.max(1, safeBounds.height());
-        overlayParams.x = safeBounds.left;
-        overlayParams.y = safeBounds.top;
+        return safeBounds;
     }
 
     private Rect resolveActiveApplicationBounds() {
-        List<AccessibilityWindowInfo> windows = getWindows();
-        if (windows != null) {
-            for (AccessibilityWindowInfo window : windows) {
-                if (window == null || window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) {
-                    continue;
-                }
-                if (!window.isActive() && !window.isFocused()) {
-                    continue;
-                }
-
-                AccessibilityNodeInfo root = null;
-                try {
-                    root = window.getRoot();
-                    CharSequence packageName = root == null ? null : root.getPackageName();
-                    if (packageName != null
-                            && (getPackageName().contentEquals(packageName)
-                            || SYSTEM_UI_PACKAGE.contentEquals(packageName))) {
-                        continue;
-                    }
-
-                    Rect bounds = new Rect();
-                    window.getBoundsInScreen(bounds);
-                    if (!bounds.isEmpty()) {
-                        return bounds;
-                    }
-                } finally {
-                    if (root != null) {
-                        root.recycle();
-                    }
-                }
-            }
+        TargetWindow target = resolveActiveApplicationWindow();
+        if (target != null) {
+            return new Rect(target.bounds);
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -311,12 +594,73 @@ public class FilterAccessibilityService extends AccessibilityService {
         Log.i(TAG, "Accessibility overlay removed");
     }
 
+    private void createNotificationChannel() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "GBModer filter",
+                NotificationManager.IMPORTANCE_LOW
+        );
+        channel.setDescription("GBModer screen filter controls");
+        manager.createNotificationChannel(channel);
+    }
+
+    private void showFilterNotification() {
+        Intent openApp = new Intent(this, MainActivity.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(
+                this,
+                0,
+                openApp,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Intent stopIntent = new Intent(this, FilterControlReceiver.class);
+        stopIntent.setAction(FilterControlReceiver.ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+                this,
+                1,
+                stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+                .setContentTitle("GBModer")
+                .setContentText("他アプリの画面をGame Boy風に変換中")
+                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .setContentIntent(contentIntent)
+                .setOngoing(true)
+                .addAction(
+                        android.R.drawable.ic_menu_close_clear_cancel,
+                        "解除",
+                        stopPendingIntent
+                )
+                .build();
+
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.notify(NOTIFICATION_ID, notification);
+    }
+
+    private void cancelFilterNotification() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.cancel(NOTIFICATION_ID);
+    }
+
     private void runOnMain(Runnable action) {
         if (getMainLooper().isCurrentThread()) {
             action.run();
         } else {
             getMainExecutor().execute(action);
         }
+    }
+
+    private String safeMode(String requestedMode) {
+        if (GameBoyFilter.MODE_GBC.equals(requestedMode)) {
+            return GameBoyFilter.MODE_GBC;
+        }
+        if (GameBoyFilter.MODE_GBA.equals(requestedMode)) {
+            return GameBoyFilter.MODE_GBA;
+        }
+        return GameBoyFilter.MODE_GB;
     }
 
     private static boolean matches(int actual, int expected) {
@@ -331,12 +675,33 @@ public class FilterAccessibilityService extends AccessibilityService {
 
     @Override
     public void onDestroy() {
+        windowFilterRunning = false;
+        screenshotInFlight = false;
+        mainHandler.removeCallbacks(captureRunnable);
+        cancelFilterNotification();
         removeOverlayInternal();
+        if (filterThread != null) {
+            filterThread.quitSafely();
+            filterThread = null;
+            filterHandler = null;
+        }
         if (instance == this) {
             instance = null;
         }
         Log.i(TAG, "Accessibility overlay service destroyed");
         super.onDestroy();
+    }
+
+    private static final class TargetWindow {
+        final int windowId;
+        final Rect bounds;
+        final String packageName;
+
+        TargetWindow(int windowId, Rect bounds, String packageName) {
+            this.windowId = windowId;
+            this.bounds = new Rect(bounds);
+            this.packageName = packageName;
+        }
     }
 
     private static final class FilterOverlayView extends View {

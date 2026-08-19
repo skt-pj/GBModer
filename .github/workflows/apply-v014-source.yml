@@ -1,0 +1,484 @@
+name: Apply v0.1.14 GPU source patch
+
+on:
+  push:
+    branches: [agent/v0.1.14-gpu-hardware-filter]
+    paths:
+      - '.github/workflows/apply-v014-source.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v0.1.14-gpu-hardware-filter
+          fetch-depth: 0
+
+      - name: Patch Android 14 window capture path
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/sktpj/gbmoder/FilterAccessibilityService.java')
+          text = path.read_text()
+
+          def replace_once(old, new, label):
+              global text
+              if text.count(old) != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, got {text.count(old)}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              '    private static final long WINDOW_CAPTURE_INTERVAL_MS = 350L;\n',
+              '    private static final long CPU_FALLBACK_CAPTURE_INTERVAL_MS = 350L;\n'
+              '    private static final long GPU_RETRY_DELAY_MS = 120L;\n',
+              'capture interval constants'
+          )
+
+          replace_once(
+              '    private boolean windowFilterDither = true;\n'
+              '    private long performanceFrameIndex = 0L;\n',
+              '    private boolean windowFilterDither = true;\n'
+              '    private boolean gpuWindowPathDisabled = false;\n'
+              '    private long performanceFrameIndex = 0L;\n',
+              'gpu disabled field'
+          )
+
+          replace_once(
+              '        windowFilterDither = dither;\n'
+              '        windowFilterRunning = true;\n',
+              '        windowFilterDither = dither;\n'
+              '        gpuWindowPathDisabled = false;\n'
+              '        windowFilterRunning = true;\n',
+              'reset gpu path'
+          )
+
+          replace_once(
+              '                windowFilterDither,\n'
+              '                WINDOW_CAPTURE_INTERVAL_MS\n'
+              '        );\n',
+              '                windowFilterDither,\n'
+              '                usesGpuWindowPath() ? GPU_RETRY_DELAY_MS : CPU_FALLBACK_CAPTURE_INTERVAL_MS\n'
+              '        );\n',
+              'performance target interval'
+          )
+
+          replace_once(
+              '        if (screenshotInFlight) {\n'
+              '            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);\n'
+              '            return;\n'
+              '        }\n',
+              '        if (screenshotInFlight) {\n'
+              '            scheduleNextWindowCapture(idleRetryDelayMs());\n'
+              '            return;\n'
+              '        }\n',
+              'in-flight retry'
+          )
+
+          text = text.replace(
+              '            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);\n',
+              '            scheduleNextWindowCapture(idleRetryDelayMs());\n',
+              2
+          )
+
+          old_success = '''                        long copyStartedNs = SystemClock.elapsedRealtimeNanos();
+                        Bitmap softwareBitmap = copyScreenshotToSoftwareBitmap(screenshot);
+                        long copyFinishedNs = SystemClock.elapsedRealtimeNanos();
+                        if (softwareBitmap == null) {
+                            Log.e(TAG, "Window screenshot returned no bitmap package=" + target.packageName);
+                            PerformanceLog.log("frame_failure pipeline=accessibility_window stage=bitmap_copy package="
+                                    + target.packageName);
+                            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+                            return;
+                        }
+
+                        ensureFilterThread();
+                        Handler handler = filterHandler;
+                        if (handler == null) {
+                            softwareBitmap.recycle();
+                            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);
+                            return;
+                        }
+
+                        long screenshotWaitNs = screenshotCallbackNs - requestStartedNs;
+                        long copyNs = copyFinishedNs - copyStartedNs;
+                        handler.post(() -> processWindowScreenshot(
+                                softwareBitmap,
+                                target,
+                                requestStartedNs,
+                                screenshotWaitNs,
+                                copyNs
+                        ));
+'''
+
+          new_success = '''                        long screenshotWaitNs = screenshotCallbackNs - requestStartedNs;
+
+                        if (usesGpuWindowPath()) {
+                            long wrapStartedNs = SystemClock.elapsedRealtimeNanos();
+                            Bitmap hardwareBitmap = wrapScreenshotToHardwareBitmap(screenshot);
+                            long wrapFinishedNs = SystemClock.elapsedRealtimeNanos();
+                            if (hardwareBitmap == null) {
+                                disableGpuWindowPath(new IllegalStateException("hardware bitmap wrap failed"));
+                                scheduleNextWindowCapture(GPU_RETRY_DELAY_MS);
+                                return;
+                            }
+
+                            int targetWidth = GameBoyFilter.getTargetWidth(
+                                    windowFilterResolution,
+                                    hardwareBitmap.getWidth()
+                            );
+                            int targetHeight = GameBoyFilter.getTargetHeight(
+                                    windowFilterResolution,
+                                    hardwareBitmap.getHeight()
+                            );
+                            long wrapNs = wrapFinishedNs - wrapStartedNs;
+                            long postedNs = SystemClock.elapsedRealtimeNanos();
+                            long frameIndex = ++performanceFrameIndex;
+                            int sourceWidth = hardwareBitmap.getWidth();
+                            int sourceHeight = hardwareBitmap.getHeight();
+
+                            mainHandler.post(() -> {
+                                if (!windowFilterRunning) {
+                                    hardwareBitmap.recycle();
+                                    return;
+                                }
+
+                                long mainStartedNs = SystemClock.elapsedRealtimeNanos();
+                                showGpuFrame(
+                                        hardwareBitmap,
+                                        target.bounds,
+                                        targetWidth,
+                                        targetHeight,
+                                        windowFilterMode,
+                                        windowFilterBrightness,
+                                        windowFilterContrast,
+                                        windowFilterDither
+                                );
+                                long overlayFinishedNs = SystemClock.elapsedRealtimeNanos();
+                                long totalNs = overlayFinishedNs - requestStartedNs;
+                                long mainQueueNs = mainStartedNs - postedNs;
+                                long overlayNs = overlayFinishedNs - mainStartedNs;
+
+                                PerformanceLog.log(
+                                        "frame=" + frameIndex
+                                                + " pipeline=accessibility_window"
+                                                + " render_path=gpu_hardware"
+                                                + " package=" + target.packageName
+                                                + " mode=" + windowFilterMode
+                                                + " resolution=" + windowFilterResolution
+                                                + " source=" + sourceWidth + "x" + sourceHeight
+                                                + " target=" + targetWidth + "x" + targetHeight
+                                                + " screenshot_wait_ms=" + PerformanceLog.formatMs(screenshotWaitNs)
+                                                + " hardware_wrap_ms=" + PerformanceLog.formatMs(wrapNs)
+                                                + " bitmap_copy_ms=0.000"
+                                                + " downsample_ms=0.000"
+                                                + " filter_ms=0.000"
+                                                + " main_queue_ms=" + PerformanceLog.formatMs(mainQueueNs)
+                                                + " overlay_ms=" + PerformanceLog.formatMs(overlayNs)
+                                                + " total_ms=" + PerformanceLog.formatMs(totalNs)
+                                );
+
+                                scheduleNextWindowCapture(0L);
+                            });
+                            return;
+                        }
+
+                        long copyStartedNs = SystemClock.elapsedRealtimeNanos();
+                        Bitmap softwareBitmap = copyScreenshotToSoftwareBitmap(screenshot);
+                        long copyFinishedNs = SystemClock.elapsedRealtimeNanos();
+                        if (softwareBitmap == null) {
+                            Log.e(TAG, "Window screenshot returned no bitmap package=" + target.packageName);
+                            PerformanceLog.log("frame_failure pipeline=accessibility_window stage=bitmap_copy package="
+                                    + target.packageName);
+                            scheduleNextWindowCapture(CPU_FALLBACK_CAPTURE_INTERVAL_MS);
+                            return;
+                        }
+
+                        ensureFilterThread();
+                        Handler handler = filterHandler;
+                        if (handler == null) {
+                            softwareBitmap.recycle();
+                            scheduleNextWindowCapture(CPU_FALLBACK_CAPTURE_INTERVAL_MS);
+                            return;
+                        }
+
+                        long copyNs = copyFinishedNs - copyStartedNs;
+                        handler.post(() -> processWindowScreenshot(
+                                softwareBitmap,
+                                target,
+                                requestStartedNs,
+                                screenshotWaitNs,
+                                copyNs
+                        ));
+'''
+          replace_once(old_success, new_success, 'window screenshot success block')
+
+          replace_once(
+              '                        long retryDelay = errorCode == ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT\n'
+              '                                ? 120L\n'
+              '                                : WINDOW_CAPTURE_INTERVAL_MS;\n',
+              '                        long retryDelay = errorCode == ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT\n'
+              '                                ? GPU_RETRY_DELAY_MS\n'
+              '                                : idleRetryDelayMs();\n',
+              'screenshot failure backoff'
+          )
+
+          marker = '''    private Bitmap copyScreenshotToSoftwareBitmap(ScreenshotResult screenshot) {
+'''
+          gpu_helpers = '''    private boolean usesGpuWindowPath() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && !gpuWindowPathDisabled
+                && !GameBoyFilter.MODE_GBC.equals(windowFilterMode);
+    }
+
+    private long idleRetryDelayMs() {
+        return usesGpuWindowPath() ? GPU_RETRY_DELAY_MS : CPU_FALLBACK_CAPTURE_INTERVAL_MS;
+    }
+
+    private void disableGpuWindowPath(Throwable error) {
+        if (gpuWindowPathDisabled) {
+            return;
+        }
+        gpuWindowPathDisabled = true;
+        Log.e(TAG, "GPU hardware filter disabled; falling back to CPU path", error);
+        PerformanceLog.log("gpu_path_disabled pipeline=accessibility_window error="
+                + error.getClass().getSimpleName());
+    }
+
+    private Bitmap wrapScreenshotToHardwareBitmap(ScreenshotResult screenshot) {
+        if (screenshot == null) {
+            return null;
+        }
+
+        HardwareBuffer hardwareBuffer = screenshot.getHardwareBuffer();
+        if (hardwareBuffer == null) {
+            return null;
+        }
+
+        try {
+            ColorSpace colorSpace = screenshot.getColorSpace();
+            if (colorSpace == null) {
+                colorSpace = ColorSpace.get(ColorSpace.Named.SRGB);
+            }
+            return Bitmap.wrapHardwareBuffer(hardwareBuffer, colorSpace);
+        } catch (Throwable error) {
+            Log.e(TAG, "Failed to wrap screenshot HardwareBuffer", error);
+            return null;
+        } finally {
+            hardwareBuffer.close();
+        }
+    }
+
+'''
+          replace_once(marker, gpu_helpers + marker, 'insert gpu helper methods')
+
+          replace_once(
+              '                long elapsedMs = totalNs / 1_000_000L;\n'
+              '                long delay = Math.max(0L, WINDOW_CAPTURE_INTERVAL_MS - elapsedMs);\n'
+              '                scheduleNextWindowCapture(delay);\n',
+              '                long elapsedMs = totalNs / 1_000_000L;\n'
+              '                long delay = Math.max(0L, CPU_FALLBACK_CAPTURE_INTERVAL_MS - elapsedMs);\n'
+              '                scheduleNextWindowCapture(delay);\n',
+              'cpu cadence'
+          )
+
+          text = text.replace(
+              '            scheduleNextWindowCapture(WINDOW_CAPTURE_INTERVAL_MS);\n',
+              '            scheduleNextWindowCapture(CPU_FALLBACK_CAPTURE_INTERVAL_MS);\n'
+          )
+
+          show_frame_marker = '''    public void setCaptureVisible(boolean visible) {
+'''
+          show_gpu = '''    private void showGpuFrame(
+            Bitmap frame,
+            Rect bounds,
+            int targetWidth,
+            int targetHeight,
+            String mode,
+            int brightness,
+            int contrast,
+            boolean dither
+    ) {
+        runOnMain(() -> {
+            ensureOverlay();
+            applyBoundsAndUpdateIfNeeded(bounds);
+            captureVisible = true;
+            overlayView.setGpuFrame(
+                    frame,
+                    targetWidth,
+                    targetHeight,
+                    mode,
+                    brightness,
+                    contrast,
+                    dither
+            );
+            updateSystemUiVisibility();
+            updateOverlayVisibility();
+        });
+    }
+
+'''
+          replace_once(show_frame_marker, show_gpu + show_frame_marker, 'insert showGpuFrame')
+
+          replace_once(
+              '''    private static final class FilterOverlayView extends View {
+        private final Paint paint = new Paint();
+        private Bitmap frame;
+        private boolean probeMode = false;
+
+        FilterOverlayView(FilterAccessibilityService context) {
+            super(context);
+            paint.setFilterBitmap(false);
+            paint.setAntiAlias(false);
+            setBackgroundColor(Color.BLACK);
+        }
+''',
+              '''    private static final class FilterOverlayView extends View {
+        private final Paint paint = new Paint();
+        private final FilterAccessibilityService service;
+        private GpuFilterRenderer gpuRenderer;
+        private Bitmap frame;
+        private boolean probeMode = false;
+        private boolean gpuFrameMode = false;
+        private int gpuTargetWidth = 1;
+        private int gpuTargetHeight = 1;
+        private String gpuMode = GameBoyFilter.MODE_GB;
+        private int gpuBrightness = 6;
+        private int gpuContrast = 122;
+        private boolean gpuDither = true;
+
+        FilterOverlayView(FilterAccessibilityService context) {
+            super(context);
+            service = context;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    gpuRenderer = new GpuFilterRenderer();
+                } catch (Throwable error) {
+                    service.disableGpuWindowPath(error);
+                }
+            }
+            paint.setFilterBitmap(false);
+            paint.setAntiAlias(false);
+            setBackgroundColor(Color.BLACK);
+        }
+''',
+              'overlay fields and constructor'
+          )
+
+          replace_once(
+              '        void showProbe() {\n'
+              '            probeMode = true;\n',
+              '        void showProbe() {\n'
+              '            probeMode = true;\n'
+              '            gpuFrameMode = false;\n',
+              'probe resets gpu frame'
+          )
+
+          replace_once(
+              '        void setFrame(Bitmap newFrame) {\n'
+              '            probeMode = false;\n',
+              '        void setFrame(Bitmap newFrame) {\n'
+              '            probeMode = false;\n'
+              '            gpuFrameMode = false;\n',
+              'cpu setFrame resets gpu mode'
+          )
+
+          set_gpu_marker = '''        @Override
+        protected void onDraw(Canvas canvas) {
+'''
+          set_gpu = '''        void setGpuFrame(
+                Bitmap newFrame,
+                int targetWidth,
+                int targetHeight,
+                String mode,
+                int brightness,
+                int contrast,
+                boolean dither
+        ) {
+            probeMode = false;
+            gpuFrameMode = true;
+            gpuTargetWidth = Math.max(1, targetWidth);
+            gpuTargetHeight = Math.max(1, targetHeight);
+            gpuMode = mode;
+            gpuBrightness = brightness;
+            gpuContrast = contrast;
+            gpuDither = dither;
+            Bitmap oldFrame = frame;
+            frame = newFrame;
+            if (oldFrame != null && oldFrame != newFrame && !oldFrame.isRecycled()) {
+                oldFrame.recycle();
+            }
+            invalidate();
+        }
+
+'''
+          replace_once(set_gpu_marker, set_gpu + set_gpu_marker, 'insert setGpuFrame')
+
+          replace_once(
+              '''            Bitmap current = frame;
+            if (current == null || current.isRecycled()) {
+                return;
+            }
+            canvas.drawBitmap(
+                    current,
+                    null,
+                    new Rect(0, 0, getWidth(), getHeight()),
+                    paint
+            );
+''',
+              '''            Bitmap current = frame;
+            if (current == null || current.isRecycled()) {
+                return;
+            }
+
+            if (gpuFrameMode && gpuRenderer != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    gpuRenderer.draw(
+                            canvas,
+                            current,
+                            getWidth(),
+                            getHeight(),
+                            gpuTargetWidth,
+                            gpuTargetHeight,
+                            gpuMode,
+                            gpuBrightness,
+                            gpuContrast,
+                            gpuDither
+                    );
+                    return;
+                } catch (Throwable error) {
+                    gpuFrameMode = false;
+                    service.disableGpuWindowPath(error);
+                }
+            }
+
+            canvas.drawBitmap(
+                    current,
+                    null,
+                    new Rect(0, 0, getWidth(), getHeight()),
+                    paint
+            );
+''',
+              'gpu onDraw path'
+          )
+
+          path.write_text(text)
+
+          version = Path('version.properties')
+          version.write_text('VERSION_NAME=0.1.14\nVERSION_CODE=15\n')
+          PY
+
+      - name: Remove one-shot patch workflow
+        run: git rm .github/workflows/apply-v014-source.yml
+
+      - name: Commit patched sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sktpj/gbmoder/FilterAccessibilityService.java version.properties
+          git commit -m "Use GPU hardware bitmap path on Android 14"
+          git push origin HEAD:agent/v0.1.14-gpu-hardware-filter

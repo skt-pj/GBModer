@@ -3,6 +3,7 @@ package com.sktpj.gbmoder;
 import android.Manifest;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -161,12 +162,31 @@ public class MainActivity extends Activity {
         buttons.addView(stopButton, stopParams);
         root.addView(buttons, matchWrap());
 
+        LinearLayout utilityButtons = new LinearLayout(this);
+        utilityButtons.setOrientation(LinearLayout.HORIZONTAL);
+        utilityButtons.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams utilityParams = matchWrap();
+        utilityParams.topMargin = dp(8);
+
         Button logSyncButton = new Button(this);
         logSyncButton.setText("ログ同期");
         logSyncButton.setOnClickListener(v -> beginLogSync());
-        LinearLayout.LayoutParams logSyncParams = matchWrap();
-        logSyncParams.topMargin = dp(8);
-        root.addView(logSyncButton, logSyncParams);
+        utilityButtons.addView(
+                logSyncButton,
+                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        );
+
+        Button adbGuideButton = new Button(this);
+        adbGuideButton.setText("ADB手順");
+        adbGuideButton.setOnClickListener(v -> showAdbGuide());
+        LinearLayout.LayoutParams adbParams = new LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+        );
+        adbParams.setMarginStart(dp(8));
+        utilityButtons.addView(adbGuideButton, adbParams);
+        root.addView(utilityButtons, utilityParams);
 
         statusText = text("停止中", 13, false);
         statusText.setPadding(0, dp(16), 0, 0);
@@ -279,6 +299,47 @@ public class MainActivity extends Activity {
         syncIntent.putExtra(Intent.EXTRA_TITLE, "gbmoder-performance.log");
         startActivityForResult(syncIntent, REQUEST_LOG_SYNC);
         statusText.setText("ログの同期先を選択してください");
+    }
+
+    private void showAdbGuide() {
+        String guide =
+                "PCからADBでAndroid全体の表示サイズ・フォントサイズを変更できます。\n\n" +
+                "【初回準備】\n" +
+                "1. 設定 → デバイス情報 → ビルド番号を7回タップ\n" +
+                "2. 開発者向けオプションを開く\n" +
+                "3. USBデバッグをON\n" +
+                "4. PCとUSB接続し、端末に出るADB許可を承認\n" +
+                "5. PCで adb devices を実行し、端末が device と表示されることを確認\n\n" +
+                "【ワイヤレスADB（Android 11以降）】\n" +
+                "1. 開発者向けオプション → ワイヤレスデバッグをON\n" +
+                "2. 『ペア設定コードによるデバイスのペア設定』を開く\n" +
+                "3. PC: adb pair IPアドレス:ペア設定ポート\n" +
+                "4. 表示された6桁コードを入力\n" +
+                "5. 必要なら PC: adb connect IPアドレス:接続ポート\n\n" +
+                "【現在値を確認】\n" +
+                "表示密度: adb shell wm density\n" +
+                "フォント: adb shell settings get system font_scale\n\n" +
+                "【変更例】\n" +
+                "表示密度: adb shell wm density 360\n" +
+                "フォント85%: adb shell settings put system font_scale 0.85\n" +
+                "フォント100%: adb shell settings put system font_scale 1.0\n\n" +
+                "【元に戻す】\n" +
+                "表示密度: adb shell wm density reset\n" +
+                "フォント: adb shell settings put system font_scale 1.0\n\n" +
+                "注意: densityの適正値は端末ごとに違います。変更前に wm density の現在値を記録してください。";
+
+        new AlertDialog.Builder(this)
+                .setTitle("ADB表示設定手順")
+                .setMessage(guide)
+                .setNeutralButton("開発者向け設定", (dialog, which) -> {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
+                    } catch (Throwable error) {
+                        startActivity(new Intent(Settings.ACTION_SETTINGS));
+                    }
+                })
+                .setPositiveButton("閉じる", null)
+                .show();
     }
 
     private boolean isAccessibilityServiceEnabled() {

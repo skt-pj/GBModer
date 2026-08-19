@@ -36,6 +36,7 @@ import java.nio.ByteBuffer;
 
 public class FilterCaptureService extends Service {
     public static final String ACTION_START = "com.sktpj.gbmoder.action.START";
+    public static final String ACTION_STOP = "com.sktpj.gbmoder.action.STOP";
     public static final String EXTRA_RESULT_CODE = "result_code";
     public static final String EXTRA_RESULT_DATA = "result_data";
     public static final String EXTRA_MODE = "mode";
@@ -77,7 +78,18 @@ public class FilterCaptureService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent == null || !ACTION_START.equals(intent.getAction())) {
+        if (intent == null) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        if (ACTION_STOP.equals(intent.getAction())) {
+            Log.i(TAG, "Stop requested from app/notification");
+            cleanupAndStop();
+            return START_NOT_STICKY;
+        }
+
+        if (!ACTION_START.equals(intent.getAction())) {
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -130,13 +142,32 @@ public class FilterCaptureService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+        Intent stopIntent = new Intent(this, FilterCaptureService.class);
+        stopIntent.setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getService(
+                this,
+                1,
+                stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle("GBModer")
                 .setContentText("他アプリの画面をGame Boy風に変換中")
                 .setSmallIcon(android.R.drawable.ic_menu_view)
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
-                .build();
+                .addAction(
+                        android.R.drawable.ic_menu_close_clear_cancel,
+                        "解除",
+                        stopPendingIntent
+                );
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
+        }
+
+        Notification notification = builder.build();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -157,13 +188,7 @@ public class FilterCaptureService extends Service {
         captureThread.start();
         captureHandler = new Handler(captureThread.getLooper());
 
-        imageReader = ImageReader.newInstance(
-                captureWidth,
-                captureHeight,
-                PixelFormat.RGBA_8888,
-                2
-        );
-        imageReader.setOnImageAvailableListener(this::onImageAvailable, captureHandler);
+        imageReader = createImageReader(captureWidth, captureHeight);
 
         MediaProjectionManager manager =
                 (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
@@ -173,6 +198,34 @@ public class FilterCaptureService extends Service {
             public void onStop() {
                 Log.i(TAG, "MediaProjection stopped by system/user");
                 mainHandler.post(FilterCaptureService.this::cleanupAndStop);
+            }
+
+            @Override
+            public void onCapturedContentResize(int width, int height) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    return;
+                }
+                if (width <= 0 || height <= 0) {
+                    return;
+                }
+                Log.i(TAG, "Captured content resized: " + width + "x" + height);
+                Handler handler = captureHandler;
+                if (handler != null) {
+                    handler.post(() -> resizeCaptureSurface(width, height));
+                }
+            }
+
+            @Override
+            public void onCapturedContentVisibilityChanged(boolean isVisible) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    return;
+                }
+                Log.i(TAG, "Captured content visibility=" + isVisible);
+                mainHandler.post(() -> {
+                    if (overlayView != null) {
+                        overlayView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+                    }
+                });
             }
         }, mainHandler);
 
@@ -192,6 +245,51 @@ public class FilterCaptureService extends Service {
                 + " brightness=" + brightness
                 + " contrast=" + contrast
                 + " dither=" + dither);
+    }
+
+    private ImageReader createImageReader(int width, int height) {
+        ImageReader reader = ImageReader.newInstance(
+                Math.max(1, width),
+                Math.max(1, height),
+                PixelFormat.RGBA_8888,
+                2
+        );
+        reader.setOnImageAvailableListener(this::onImageAvailable, captureHandler);
+        return reader;
+    }
+
+    private void resizeCaptureSurface(int width, int height) {
+        if (cleanedUp || virtualDisplay == null || imageReader == null) {
+            return;
+        }
+        if (captureWidth == width && captureHeight == height) {
+            return;
+        }
+
+        ImageReader previousReader = imageReader;
+        ImageReader replacementReader = createImageReader(width, height);
+
+        try {
+            virtualDisplay.resize(width, height, densityDpi);
+            virtualDisplay.setSurface(replacementReader.getSurface());
+            imageReader = replacementReader;
+            captureWidth = width;
+            captureHeight = height;
+
+            previousReader.setOnImageAvailableListener(null, null);
+            previousReader.close();
+
+            recycleBitmap(captureBitmap);
+            captureBitmap = null;
+            recycleBitmap(lowResolutionBitmap);
+            lowResolutionBitmap = null;
+
+            Log.i(TAG, "Capture surface resized to selected app: " + width + "x" + height);
+        } catch (Throwable error) {
+            replacementReader.setOnImageAvailableListener(null, null);
+            replacementReader.close();
+            Log.e(TAG, "Capture surface resize failed", error);
+        }
     }
 
     private void resolveCaptureSize() {

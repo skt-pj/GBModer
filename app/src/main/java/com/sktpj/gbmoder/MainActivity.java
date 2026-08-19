@@ -119,16 +119,7 @@ public class MainActivity extends Activity {
 
         Button stopButton = new Button(this);
         stopButton.setText("停止");
-        stopButton.setOnClickListener(v -> {
-            Intent stopIntent = new Intent(this, FilterCaptureService.class);
-            stopIntent.setAction(FilterCaptureService.ACTION_STOP);
-            startService(stopIntent);
-            FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
-            if (accessibilityService != null) {
-                accessibilityService.clearOverlay();
-            }
-            statusText.setText("停止しました");
-        });
+        stopButton.setOnClickListener(v -> stopFilter());
         LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         stopParams.setMarginStart(dp(8));
         buttons.addView(stopButton, stopParams);
@@ -139,9 +130,8 @@ public class MainActivity extends Activity {
         root.addView(statusText, matchWrap());
 
         TextView note = text(
-                "Android 14〜16では共有画面で「1つのアプリ」を選択してください。画面全体を選んだ場合はGBModer側で検出して停止します。" +
-                        " Android 17以降では全画面共有を選択肢から除外します。通知欄の「解除」からいつでも停止できます。" +
-                        " DRM/FLAG_SECURE等で保護された画面は取得できません。",
+                "Android 14以降では対象アプリのウィンドウだけを直接取得するため、GBModer自身のフィルター表示は再取得しません。" +
+                        " 通知欄の「解除」からいつでも停止できます。DRM/FLAG_SECURE等で保護された画面は取得できません。",
                 12,
                 false
         );
@@ -182,7 +172,7 @@ public class MainActivity extends Activity {
             return;
         }
 
-        requestScreenCapture();
+        startFilterForCurrentPlatform();
     }
 
     private void continueAfterAccessibilityIfReady() {
@@ -190,8 +180,47 @@ public class MainActivity extends Activity {
             return;
         }
         if (isAccessibilityServiceEnabled() && FilterAccessibilityService.getInstance() != null) {
-            requestScreenCapture();
+            startFilterForCurrentPlatform();
         }
+    }
+
+    private void startFilterForCurrentPlatform() {
+        pendingStartAfterAccessibility = false;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+            if (accessibilityService == null) {
+                statusText.setText("ユーザー補助サービスに接続できません");
+                return;
+            }
+
+            accessibilityService.startWindowFilter(
+                    getSelectedMode(),
+                    getBrightness(),
+                    getContrast(),
+                    ditherSwitch.isChecked()
+            );
+            statusText.setText("フィルターを開始しました");
+            return;
+        }
+
+        requestScreenCapture();
+    }
+
+    private void stopFilter() {
+        FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+        if (accessibilityService != null) {
+            accessibilityService.stopWindowFilter();
+            accessibilityService.clearOverlay();
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            Intent stopIntent = new Intent(this, FilterCaptureService.class);
+            stopIntent.setAction(FilterCaptureService.ACTION_STOP);
+            startService(stopIntent);
+        }
+
+        statusText.setText("停止しました");
     }
 
     private boolean isAccessibilityServiceEnabled() {

@@ -1,0 +1,1 @@
+Validation target: Android 14+ GB/GBA/DS should log render_path=gpu_hardware and bypass CPU bitmap copy/downsample/filter stages. GBC remains on the CPU path to preserve the existing 56-visible-color reduction.

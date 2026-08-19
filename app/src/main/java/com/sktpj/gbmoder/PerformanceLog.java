@@ -58,7 +58,6 @@ public final class PerformanceLog {
 
     public static void log(String message) {
         String line = "elapsed_ms=" + SystemClock.elapsedRealtime() + " " + message;
-        Log.i(TAG, line);
         writeAsync(line, false);
     }
 

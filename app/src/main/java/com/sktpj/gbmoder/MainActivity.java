@@ -1,19 +1,22 @@
 package com.sktpj.gbmoder;
 
 import android.Manifest;
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.media.projection.MediaProjectionManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.view.accessibility.AccessibilityManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -24,10 +27,10 @@ import android.widget.TextView;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 
 public class MainActivity extends Activity {
     private static final String TAG = "GBModerMain";
-    private static final int REQUEST_OVERLAY = 1001;
     private static final int REQUEST_CAPTURE = 1002;
     private static final int REQUEST_NOTIFICATIONS = 1003;
 
@@ -39,7 +42,7 @@ public class MainActivity extends Activity {
     private TextView brightnessValue;
     private TextView contrastValue;
     private TextView statusText;
-    private boolean pendingStartAfterOverlay = false;
+    private boolean pendingStartAfterAccessibility = false;
     private boolean pendingStartAfterNotification = false;
 
     @Override
@@ -60,7 +63,7 @@ public class MainActivity extends Activity {
         root.addView(title, matchWrap());
 
         TextView description = text(
-                "他アプリをGame Boy風に表示します。開始後のAndroid共有画面では「1つのアプリ」を選択してください。",
+                "他アプリをGame Boy風に表示します。初回のみGBModerのユーザー補助サービスを有効にしてください。",
                 14,
                 false
         );
@@ -120,6 +123,10 @@ public class MainActivity extends Activity {
             Intent stopIntent = new Intent(this, FilterCaptureService.class);
             stopIntent.setAction(FilterCaptureService.ACTION_STOP);
             startService(stopIntent);
+            FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+            if (accessibilityService != null) {
+                accessibilityService.clearOverlay();
+            }
             statusText.setText("停止しました");
         });
         LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -132,9 +139,9 @@ public class MainActivity extends Activity {
         root.addView(statusText, matchWrap());
 
         TextView note = text(
-                "画面全体共有ではGBModer自身の表示が再キャプチャされるため使用しません。" +
-                        " Android 17以降では全画面共有を選択肢から除外し、Android 14〜16では共有画面で必ず「1つのアプリ」を選択してください。" +
-                        " 通知欄の「解除」からいつでも停止できます。 DRM/FLAG_SECURE等で保護された画面は取得できません。",
+                "Android 14〜16では共有画面で「1つのアプリ」を選択してください。画面全体を選んだ場合はGBModer側で検出して停止します。" +
+                        " Android 17以降では全画面共有を選択肢から除外します。通知欄の「解除」からいつでも停止できます。" +
+                        " DRM/FLAG_SECURE等で保護された画面は取得できません。",
                 12,
                 false
         );
@@ -156,26 +163,65 @@ public class MainActivity extends Activity {
             return;
         }
 
-        beginOverlayFlow();
+        beginAccessibilityFlow();
     }
 
-    private void beginOverlayFlow() {
+    private void beginAccessibilityFlow() {
         pendingStartAfterNotification = false;
-        if (!Settings.canDrawOverlays(this)) {
-            pendingStartAfterOverlay = true;
-            Intent overlayIntent = new Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + getPackageName())
-            );
-            startActivityForResult(overlayIntent, REQUEST_OVERLAY);
-            statusText.setText("「他のアプリの上に表示」を許可してください");
+        if (!isAccessibilityServiceEnabled()) {
+            pendingStartAfterAccessibility = true;
+            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            statusText.setText("ユーザー補助で「GBModer screen filter」を有効にしてください");
             return;
         }
+
+        if (FilterAccessibilityService.getInstance() == null) {
+            pendingStartAfterAccessibility = true;
+            statusText.setText("ユーザー補助サービスの接続を待っています");
+            statusText.postDelayed(this::continueAfterAccessibilityIfReady, 500L);
+            return;
+        }
+
         requestScreenCapture();
     }
 
+    private void continueAfterAccessibilityIfReady() {
+        if (!pendingStartAfterAccessibility) {
+            return;
+        }
+        if (isAccessibilityServiceEnabled() && FilterAccessibilityService.getInstance() != null) {
+            requestScreenCapture();
+        }
+    }
+
+    private boolean isAccessibilityServiceEnabled() {
+        AccessibilityManager manager =
+                (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+        if (manager == null || !manager.isEnabled()) {
+            return false;
+        }
+
+        ComponentName expected = new ComponentName(this, FilterAccessibilityService.class);
+        List<AccessibilityServiceInfo> enabledServices =
+                manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+        for (AccessibilityServiceInfo info : enabledServices) {
+            if (info == null || info.getResolveInfo() == null) {
+                continue;
+            }
+            ServiceInfo serviceInfo = info.getResolveInfo().serviceInfo;
+            if (serviceInfo == null) {
+                continue;
+            }
+            ComponentName actual = new ComponentName(serviceInfo.packageName, serviceInfo.name);
+            if (expected.equals(actual)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void requestScreenCapture() {
-        pendingStartAfterOverlay = false;
+        pendingStartAfterAccessibility = false;
         statusText.setText("共有する他アプリを選択してください");
         startActivityForResult(createSingleAppPreferredCaptureIntent(), REQUEST_CAPTURE);
     }
@@ -228,8 +274,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (pendingStartAfterOverlay && Settings.canDrawOverlays(this)) {
-            requestScreenCapture();
+        if (pendingStartAfterAccessibility) {
+            statusText.postDelayed(this::continueAfterAccessibilityIfReady, 300L);
         }
     }
 
@@ -244,7 +290,7 @@ public class MainActivity extends Activity {
         boolean granted = grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
         if (granted && pendingStartAfterNotification) {
-            beginOverlayFlow();
+            beginAccessibilityFlow();
         } else {
             pendingStartAfterNotification = false;
             statusText.setText("通知欄の解除を使うため通知権限が必要です");
@@ -255,14 +301,6 @@ public class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == REQUEST_OVERLAY) {
-            if (!Settings.canDrawOverlays(this)) {
-                pendingStartAfterOverlay = false;
-                statusText.setText("オーバーレイ権限が必要です");
-            }
-            return;
-        }
 
         if (requestCode != REQUEST_CAPTURE) {
             return;

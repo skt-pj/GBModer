@@ -1,14 +1,17 @@
 package com.sktpj.gbmoder;
 
 import android.content.Context;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Locale;
 
 public final class PerformanceLog {
@@ -20,6 +23,10 @@ public final class PerformanceLog {
     private static File logFile;
 
     private PerformanceLog() {
+    }
+
+    public interface SyncCallback {
+        void onComplete(boolean success, String errorMessage);
     }
 
     public static void startSession(
@@ -68,6 +75,66 @@ public final class PerformanceLog {
     public static String getLogPath() {
         File file = logFile;
         return file == null ? "" : file.getAbsolutePath();
+    }
+
+    public static void syncToUri(Context context, Uri destination, SyncCallback callback) {
+        if (context == null || destination == null) {
+            dispatchSyncResult(context, callback, false, "同期先がありません");
+            return;
+        }
+
+        ensureThread();
+        Handler handler = logHandler;
+        if (handler == null) {
+            dispatchSyncResult(context, callback, false, "ログ処理を開始できません");
+            return;
+        }
+
+        handler.post(() -> {
+            File file = logFile;
+            if (file == null || !file.isFile()) {
+                dispatchSyncResult(context, callback, false, "同期するログがありません");
+                return;
+            }
+
+            try (FileInputStream input = new FileInputStream(file);
+                 OutputStream output = context.getContentResolver().openOutputStream(destination, "wt")) {
+                if (output == null) {
+                    dispatchSyncResult(context, callback, false, "同期先を開けません");
+                    return;
+                }
+
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = input.read(buffer)) >= 0) {
+                    if (read > 0) {
+                        output.write(buffer, 0, read);
+                    }
+                }
+                output.flush();
+                Log.i(TAG, "Performance log synced to selected document");
+                dispatchSyncResult(context, callback, true, "");
+            } catch (IOException error) {
+                Log.e(TAG, "Failed to sync performance log", error);
+                dispatchSyncResult(context, callback, false, error.getClass().getSimpleName());
+            }
+        });
+    }
+
+    private static void dispatchSyncResult(
+            Context context,
+            SyncCallback callback,
+            boolean success,
+            String errorMessage
+    ) {
+        if (callback == null) {
+            return;
+        }
+        if (context == null) {
+            callback.onComplete(success, errorMessage);
+            return;
+        }
+        context.getMainExecutor().execute(() -> callback.onComplete(success, errorMessage));
     }
 
     private static void ensureThread() {

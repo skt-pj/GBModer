@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
     private static final String TAG = "GBModerMain";
     private static final int REQUEST_CAPTURE = 1002;
     private static final int REQUEST_NOTIFICATIONS = 1003;
+    private static final int REQUEST_LOG_SYNC = 1004;
 
     private MediaProjectionManager projectionManager;
     private Spinner modeSpinner;
@@ -104,6 +105,14 @@ public class MainActivity extends Activity {
         resolutionSpinner.setAdapter(resolutionAdapter);
         root.addView(resolutionSpinner, matchWrap());
 
+        TextView combinationNote = text(
+                "表示モードの色・階調処理と、解像度の出力サイズを組み合わせて適用します。",
+                12,
+                false
+        );
+        combinationNote.setPadding(0, dp(4), 0, 0);
+        root.addView(combinationNote, matchWrap());
+
         brightnessValue = text("明るさ: 6", 14, false);
         brightnessValue.setPadding(0, dp(16), 0, 0);
         root.addView(brightnessValue, matchWrap());
@@ -146,6 +155,13 @@ public class MainActivity extends Activity {
         stopParams.setMarginStart(dp(8));
         buttons.addView(stopButton, stopParams);
         root.addView(buttons, matchWrap());
+
+        Button logSyncButton = new Button(this);
+        logSyncButton.setText("ログ同期");
+        logSyncButton.setOnClickListener(v -> beginLogSync());
+        LinearLayout.LayoutParams logSyncParams = matchWrap();
+        logSyncParams.topMargin = dp(8);
+        root.addView(logSyncButton, logSyncParams);
 
         statusText = text("停止中", 13, false);
         statusText.setPadding(0, dp(16), 0, 0);
@@ -223,7 +239,7 @@ public class MainActivity extends Activity {
                     getContrast(),
                     ditherSwitch.isChecked()
             );
-            statusText.setText("フィルターを開始しました");
+            statusText.setText("表示モード × 解像度の組み合わせで開始しました");
             return;
         }
 
@@ -244,6 +260,20 @@ public class MainActivity extends Activity {
         }
 
         statusText.setText("停止しました");
+    }
+
+    private void beginLogSync() {
+        if (!PerformanceLog.hasLog(this)) {
+            statusText.setText("同期する性能ログがありません");
+            return;
+        }
+
+        Intent syncIntent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        syncIntent.addCategory(Intent.CATEGORY_OPENABLE);
+        syncIntent.setType("text/plain");
+        syncIntent.putExtra(Intent.EXTRA_TITLE, "gbmoder-performance.log");
+        startActivityForResult(syncIntent, REQUEST_LOG_SYNC);
+        statusText.setText("ログの同期先を選択してください");
     }
 
     private boolean isAccessibilityServiceEnabled() {
@@ -354,6 +384,23 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        if (requestCode == REQUEST_LOG_SYNC) {
+            if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+                statusText.setText("ログ同期をキャンセルしました");
+                return;
+            }
+
+            statusText.setText("ログを同期中です");
+            PerformanceLog.syncToUri(this, data.getData(), (success, errorMessage) -> {
+                if (success) {
+                    statusText.setText("ログを同期しました");
+                } else {
+                    statusText.setText("ログ同期に失敗しました: " + errorMessage);
+                }
+            });
+            return;
+        }
+
         if (requestCode != REQUEST_CAPTURE) {
             return;
         }
@@ -373,7 +420,7 @@ public class MainActivity extends Activity {
         serviceIntent.putExtra(FilterCaptureService.EXTRA_CONTRAST, getContrast());
         serviceIntent.putExtra(FilterCaptureService.EXTRA_DITHER, ditherSwitch.isChecked());
         startForegroundService(serviceIntent);
-        statusText.setText("フィルターを開始しました");
+        statusText.setText("表示モード × 解像度の組み合わせで開始しました");
     }
 
     private String getSelectedMode() {

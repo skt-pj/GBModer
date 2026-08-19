@@ -25,12 +25,10 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
-import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import java.nio.ByteBuffer;
 
@@ -56,8 +54,6 @@ public class FilterCaptureService extends Service {
     private ImageReader imageReader;
     private HandlerThread captureThread;
     private Handler captureHandler;
-    private WindowManager windowManager;
-    private FilterOverlayView overlayView;
     private Bitmap captureBitmap;
     private Bitmap lowResolutionBitmap;
     private int captureWidth;
@@ -69,6 +65,7 @@ public class FilterCaptureService extends Service {
     private boolean dither = true;
     private long lastFrameNanos = 0L;
     private boolean cleanedUp = false;
+    private boolean projectionProbePending = true;
 
     @Override
     public void onCreate() {
@@ -94,13 +91,17 @@ public class FilterCaptureService extends Service {
             return START_NOT_STICKY;
         }
 
-        if (!Settings.canDrawOverlays(this)) {
-            Log.e(TAG, "Overlay permission is missing");
+        FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+        if (accessibilityService == null) {
+            Log.e(TAG, "Accessibility overlay service is not connected");
+            Toast.makeText(this, "GBModerのユーザー補助サービスを有効にしてください", Toast.LENGTH_LONG).show();
             stopSelf();
             return START_NOT_STICKY;
         }
 
         cleanedUp = false;
+        projectionProbePending = true;
+        lastFrameNanos = 0L;
         mode = safeMode(intent.getStringExtra(EXTRA_MODE));
         brightness = intent.getIntExtra(EXTRA_BRIGHTNESS, 6);
         contrast = intent.getIntExtra(EXTRA_CONTRAST, 122);
@@ -182,7 +183,12 @@ public class FilterCaptureService extends Service {
 
     private void startCapture(int resultCode, Intent resultData) {
         resolveCaptureSize();
-        addOverlay();
+
+        FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+        if (accessibilityService == null) {
+            throw new IllegalStateException("Accessibility overlay service disconnected");
+        }
+        accessibilityService.prepareProbe();
 
         captureThread = new HandlerThread("GBModerCaptureThread");
         captureThread.start();
@@ -221,11 +227,10 @@ public class FilterCaptureService extends Service {
                     return;
                 }
                 Log.i(TAG, "Captured content visibility=" + isVisible);
-                mainHandler.post(() -> {
-                    if (overlayView != null) {
-                        overlayView.setVisibility(isVisible ? View.VISIBLE : View.GONE);
-                    }
-                });
+                FilterAccessibilityService service = FilterAccessibilityService.getInstance();
+                if (service != null) {
+                    service.setCaptureVisible(isVisible);
+                }
             }
         }, mainHandler);
 
@@ -244,7 +249,8 @@ public class FilterCaptureService extends Service {
                 + " mode=" + mode
                 + " brightness=" + brightness
                 + " contrast=" + contrast
-                + " dither=" + dither);
+                + " dither=" + dither
+                + " probe=true");
     }
 
     private ImageReader createImageReader(int width, int height) {
@@ -293,7 +299,7 @@ public class FilterCaptureService extends Service {
     }
 
     private void resolveCaptureSize() {
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         densityDpi = getResources().getConfiguration().densityDpi;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -310,36 +316,18 @@ public class FilterCaptureService extends Service {
         }
     }
 
-    private void addOverlay() {
-        overlayView = new FilterOverlayView(this);
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                PixelFormat.TRANSLUCENT
-        );
-        params.gravity = Gravity.TOP | Gravity.START;
-        params.alpha = 0.79f;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            params.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-        }
-        windowManager.addView(overlayView, params);
-        Log.i(TAG, "Overlay added with pass-through alpha=" + params.alpha);
-    }
-
     private void onImageAvailable(ImageReader reader) {
         Image image = null;
         try {
             image = reader.acquireLatestImage();
-            if (image == null) return;
+            if (image == null) {
+                return;
+            }
 
             long now = System.nanoTime();
-            if (lastFrameNanos != 0L && now - lastFrameNanos < MIN_FRAME_INTERVAL_NS) {
+            if (!projectionProbePending
+                    && lastFrameNanos != 0L
+                    && now - lastFrameNanos < MIN_FRAME_INTERVAL_NS) {
                 return;
             }
             lastFrameNanos = now;
@@ -349,7 +337,8 @@ public class FilterCaptureService extends Service {
             int pixelStride = plane.getPixelStride();
             int rowStride = plane.getRowStride();
             int rowPadding = rowStride - (pixelStride * image.getWidth());
-            int paddedWidth = image.getWidth() + Math.max(0, rowPadding / Math.max(1, pixelStride));
+            int paddedWidth = image.getWidth()
+                    + Math.max(0, rowPadding / Math.max(1, pixelStride));
 
             if (captureBitmap == null
                     || captureBitmap.getWidth() != paddedWidth
@@ -364,6 +353,35 @@ public class FilterCaptureService extends Service {
 
             buffer.rewind();
             captureBitmap.copyPixelsFromBuffer(buffer);
+
+            if (projectionProbePending) {
+                FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+                boolean probeCaptured = accessibilityService != null
+                        && accessibilityService.isProbeFrame(
+                        captureBitmap,
+                        image.getWidth(),
+                        image.getHeight()
+                );
+                projectionProbePending = false;
+                Log.i(TAG, "Projection probe captured=" + probeCaptured
+                        + " frame=" + image.getWidth() + "x" + image.getHeight());
+
+                if (probeCaptured) {
+                    mainHandler.post(() -> {
+                        FilterAccessibilityService service = FilterAccessibilityService.getInstance();
+                        if (service != null) {
+                            service.clearOverlay();
+                        }
+                        Toast.makeText(
+                                this,
+                                "画面全体共有は使用できません。「1つのアプリ」を選択してください。",
+                                Toast.LENGTH_LONG
+                        ).show();
+                        cleanupAndStop();
+                    });
+                    return;
+                }
+            }
 
             int targetWidth = GameBoyFilter.getBaseWidth(mode);
             int targetHeight = Math.max(
@@ -404,10 +422,13 @@ public class FilterCaptureService extends Service {
 
             Bitmap frameForOverlay = lowResolutionBitmap.copy(Bitmap.Config.ARGB_8888, false);
             mainHandler.post(() -> {
-                if (overlayView != null) {
-                    overlayView.setFrame(frameForOverlay);
+                FilterAccessibilityService service = FilterAccessibilityService.getInstance();
+                if (service != null) {
+                    service.showFrame(frameForOverlay);
                 } else {
                     frameForOverlay.recycle();
+                    Log.e(TAG, "Accessibility service disconnected while rendering");
+                    cleanupAndStop();
                 }
             });
         } catch (Throwable error) {
@@ -420,8 +441,12 @@ public class FilterCaptureService extends Service {
     }
 
     private String safeMode(String requestedMode) {
-        if (GameBoyFilter.MODE_GBC.equals(requestedMode)) return GameBoyFilter.MODE_GBC;
-        if (GameBoyFilter.MODE_GBA.equals(requestedMode)) return GameBoyFilter.MODE_GBA;
+        if (GameBoyFilter.MODE_GBC.equals(requestedMode)) {
+            return GameBoyFilter.MODE_GBC;
+        }
+        if (GameBoyFilter.MODE_GBA.equals(requestedMode)) {
+            return GameBoyFilter.MODE_GBA;
+        }
         return GameBoyFilter.MODE_GB;
     }
 
@@ -461,14 +486,12 @@ public class FilterCaptureService extends Service {
             }
             mediaProjection = null;
         }
-        if (overlayView != null && windowManager != null) {
-            try {
-                windowManager.removeView(overlayView);
-            } catch (Throwable ignored) {
-            }
-            overlayView.release();
-            overlayView = null;
+
+        FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+        if (accessibilityService != null) {
+            accessibilityService.clearOverlay();
         }
+
         if (captureThread != null) {
             captureThread.quitSafely();
             captureThread = null;
@@ -501,48 +524,6 @@ public class FilterCaptureService extends Service {
     private static void recycleBitmap(Bitmap bitmap) {
         if (bitmap != null && !bitmap.isRecycled()) {
             bitmap.recycle();
-        }
-    }
-
-    private static final class FilterOverlayView extends View {
-        private final Paint paint = new Paint();
-        private Bitmap frame;
-
-        FilterOverlayView(Context context) {
-            super(context);
-            paint.setFilterBitmap(false);
-            paint.setAntiAlias(false);
-            setBackgroundColor(Color.BLACK);
-        }
-
-        void setFrame(Bitmap newFrame) {
-            Bitmap oldFrame = frame;
-            frame = newFrame;
-            if (oldFrame != null && oldFrame != newFrame && !oldFrame.isRecycled()) {
-                oldFrame.recycle();
-            }
-            invalidate();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            Bitmap current = frame;
-            if (current == null || current.isRecycled()) return;
-            canvas.drawBitmap(
-                    current,
-                    null,
-                    new Rect(0, 0, getWidth(), getHeight()),
-                    paint
-            );
-        }
-
-        void release() {
-            Bitmap current = frame;
-            frame = null;
-            if (current != null && !current.isRecycled()) {
-                current.recycle();
-            }
         }
     }
 }

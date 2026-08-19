@@ -1,6 +1,5 @@
 package com.sktpj.gbmoder;
 
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 
@@ -12,11 +11,7 @@ public final class GameBoyFilter {
     public static final String MODE_GBC = "gbc";
     public static final String MODE_GBA = "gba";
 
-    private static final int GB_WIDTH = 160;
-    private static final int GB_HEIGHT = 144;
     private static final int GBC_COLOR_LIMIT = 56;
-    private static final float DITHER_PROTECT_DARK = 32.0f;
-    private static final float DITHER_PROTECT_LIGHT = 223.0f;
 
     private static final int[][] GB_PALETTE = {
             {155, 188, 15},
@@ -36,17 +31,16 @@ public final class GameBoyFilter {
     }
 
     public static int getBaseWidth(String mode) {
-        if (MODE_GB.equals(mode)) {
-            return GB_WIDTH;
+        if (MODE_GBA.equals(mode)) {
+            return 240;
         }
-        int displayWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
-        return Math.max(1, displayWidth);
+        if (MODE_DS.equals(mode)) {
+            return 256;
+        }
+        return 160;
     }
 
     public static int getBaseHeight(String mode, int sourceWidth, int sourceHeight) {
-        if (MODE_GB.equals(mode)) {
-            return GB_HEIGHT;
-        }
         int targetWidth = getBaseWidth(mode);
         return Math.max(
                 1,
@@ -123,8 +117,7 @@ public final class GameBoyFilter {
                 float g = ((Color.green(color) - 128.0f) * contrast) + 128.0f + brightness;
                 float b = ((Color.blue(color) - 128.0f) * contrast) + 128.0f + brightness;
 
-                float lum = (0.299f * r) + (0.587f * g) + (0.114f * b);
-                if (dither && shouldApplyDither(lum)) {
+                if (dither) {
                     float threshold = (BAYER_4X4[y & 3][x & 3] - 7.5f) * 2.5f;
                     r += threshold;
                     g += threshold;
@@ -156,8 +149,7 @@ public final class GameBoyFilter {
                 float g = ((Color.green(color) - 128.0f) * contrast) + 128.0f + brightness;
                 float b = ((Color.blue(color) - 128.0f) * contrast) + 128.0f + brightness;
 
-                float lum = (0.299f * r) + (0.587f * g) + (0.114f * b);
-                if (dither && shouldApplyDither(lum)) {
+                if (dither) {
                     float threshold = (BAYER_4X4[y & 3][x & 3] - 7.5f) * 2.5f;
                     r += threshold;
                     g += threshold;
@@ -171,10 +163,6 @@ public final class GameBoyFilter {
                 );
             }
         }
-    }
-
-    private static boolean shouldApplyDither(float luminance) {
-        return luminance > DITHER_PROTECT_DARK && luminance < DITHER_PROTECT_LIGHT;
     }
 
     private static int quantizeRgb555(float value) {

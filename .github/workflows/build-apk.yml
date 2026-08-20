@@ -54,7 +54,7 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test UI specification, text synchronization, Pixel 10a insets, renderers, and build signed debug APK
+      - name: Test UI specification, text synchronization, single-scroll UIUX, renderers, and build signed debug APK
         run: |
           set +e
           gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
@@ -68,7 +68,7 @@ jobs:
             status=$?
           fi
           if [ "$status" = "0" ]; then
-            python3 tools/verify_route_insets_v025.py
+            python3 tools/verify_uiux_v026.py
             status=$?
           fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"

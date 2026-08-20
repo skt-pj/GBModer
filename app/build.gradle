@@ -15,6 +15,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_japanese_font_source_v019.py'))
     inputs.file(rootProject.file('tools/run_japanese_font_source_v019.py'))
     inputs.file(rootProject.file('tools/finish_compose_ui_source_v020.py'))
+    inputs.file(rootProject.file('tools/finish_startup_source_v021.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,

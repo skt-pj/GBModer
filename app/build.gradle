@@ -17,6 +17,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_compose_ui_source_v020.py'))
     inputs.file(rootProject.file('tools/finish_startup_source_v021.py'))
     inputs.file(rootProject.file('tools/finish_text_route_source_v022.py'))
+    inputs.file(rootProject.file('tools/finish_text_layout_source_v023.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,

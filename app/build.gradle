@@ -6,6 +6,7 @@ plugins {
 def generatedGpuSourceDir = file("$buildDir/generated/gbmoderGpu/java")
 def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.dir('src/main/java')
+    inputs.file(rootProject.file('tools/prepare_all_sources_v020.py'))
     inputs.file(rootProject.file('tools/prepare_gpu_source.py'))
     inputs.file(rootProject.file('tools/finish_gpu_source_v015.py'))
     inputs.file(rootProject.file('tools/finish_capture_source_v016.py'))
@@ -16,41 +17,9 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_compose_ui_source_v020.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
-            rootProject.file('tools/prepare_gpu_source.py').absolutePath,
+            rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,
             file('src/main/java').absolutePath,
             generatedGpuSourceDir.absolutePath
-    doLast {
-        project.exec {
-            commandLine 'python3',
-                    rootProject.file('tools/finish_gpu_source_v015.py').absolutePath,
-                    generatedGpuSourceDir.absolutePath
-        }
-        project.exec {
-            commandLine 'python3',
-                    rootProject.file('tools/finish_capture_source_v016.py').absolutePath,
-                    generatedGpuSourceDir.absolutePath
-        }
-        project.exec {
-            commandLine 'python3',
-                    rootProject.file('tools/finish_font_min_source_v017.py').absolutePath,
-                    generatedGpuSourceDir.absolutePath
-        }
-        project.exec {
-            commandLine 'python3',
-                    rootProject.file('tools/finish_font_min_source_v018.py').absolutePath,
-                    generatedGpuSourceDir.absolutePath
-        }
-        project.exec {
-            commandLine 'python3',
-                    rootProject.file('tools/run_japanese_font_source_v019.py').absolutePath,
-                    generatedGpuSourceDir.absolutePath
-        }
-        project.exec {
-            commandLine 'python3',
-                    rootProject.file('tools/finish_compose_ui_source_v020.py').absolutePath,
-                    generatedGpuSourceDir.absolutePath
-        }
-    }
 }
 
 android {

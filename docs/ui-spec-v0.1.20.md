@@ -204,8 +204,8 @@ Expanded画面では左ペインに静的なGB 160×144風プレビューを表�
 - Material 3 Adaptive: `1.3.0`
 - compileSdk: `37`
 - targetSdk: `35`を維持（UI移行でtarget動作まで変更しない）
-- AGP: `9.4.0`
-- Gradle: `9.6.0`
+- AGP: `9.3.0`（2026年7月安定版）
+- Gradle: `9.5.0`
 - SDK Build Tools: `36.0.0`
 - JDK: `17`
 - Compose Compiler plugin / Kotlin: `2.3.21`
@@ -213,6 +213,8 @@ Expanded画面では左ペインに静的なGB 160×144風プレビューを表�
 AGP 9以降のbuilt-in Kotlinを使用し、`org.jetbrains.kotlin.android` pluginは追加しない。Compose compiler pluginは別途適用する。
 
 API 37 PlatformはSDK Manager上で `platforms;android-37.0` として配布される環境があるため、CIではminor-version付きパッケージ名を使用する。
+
+注: Android DevelopersにはAGP 9.4のページが存在するが、2026-08-20時点で掲載されている9.4ビルドはalpha系列であり、安定 `9.4.0` artifactは利用しない。
 
 ## 19. 非対象
 

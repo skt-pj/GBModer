@@ -236,6 +236,32 @@ accessibility = replace_once(
 ''',
     "media projection text sync API",
 )
+accessibility = replace_once(
+    accessibility,
+    '''    public void showFrame(Bitmap frame) {
+        runOnMain(() -> {
+            ensureOverlay();
+            updateOverlayBoundsIfNeeded();
+            overlayView.setFrame(frame);
+            updateOverlayVisibility();
+        });
+    }
+''',
+    '''    public void showFrame(Bitmap frame) {
+        runOnMain(() -> {
+            ensureOverlay();
+            updateOverlayBoundsIfNeeded();
+            // Scroll/content invalidation hides the old MediaProjection overlay.
+            // Only a newly revision-validated frame reaches this method, so it is
+            // safe to make the overlay visible again here.
+            captureVisible = true;
+            overlayView.setFrame(frame);
+            updateOverlayVisibility();
+        });
+    }
+''',
+    "fresh media projection frame restores visibility",
+)
 write("FilterAccessibilityService.java", accessibility)
 
 

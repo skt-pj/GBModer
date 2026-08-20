@@ -40,11 +40,11 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Restore stable development signing key
+      - name: Restore common signing key
         run: |
           mkdir -p ci
-          curl -fsSL https://raw.githubusercontent.com/skt-pj/pointCloudSplating/main/ci/pointcloud-dev.jks.b64 -o ci/pointcloud-dev.jks.b64
-          base64 --decode ci/pointcloud-dev.jks.b64 > ci/pointcloud-dev.jks
+          curl -fsSL https://raw.githubusercontent.com/skt-pj/2048TD/main/ci/2048td-release.jks.b64 -o ci/skt-common-signing.jks.b64
+          base64 --decode ci/skt-common-signing.jks.b64 > ci/skt-common-signing.jks
 
       - name: Apply app version
         run: |
@@ -54,7 +54,7 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test UI specification, text synchronization, renderers, and build signed debug APK
+      - name: Test UI specification, text synchronization, Pixel 10a insets, renderers, and build signed debug APK
         run: |
           set +e
           gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
@@ -67,24 +67,73 @@ jobs:
             python3 tools/verify_text_scroll_sync_v024.py
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_route_insets_v025.py
+            status=$?
+          fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"
           exit 0
+
+      - name: Verify APK digest and common signing certificate
+        if: env.BUILD_STATUS == '0'
+        run: |
+          set -euo pipefail
+          out_dir="app/build/outputs/apk/debug"
+          source_apk="$out_dir/app-debug.apk"
+          versioned_apk="$out_dir/GBModer-v${VERSION_NAME}-debug.apk"
+          cp "$source_apk" "$versioned_apk"
+
+          sha256sum "$versioned_apk" > "$out_dir/GBModer-v${VERSION_NAME}-debug.apk.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$versioned_apk" \
+            | tee "$out_dir/signing-certificate.txt"
+
+          actual_cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$out_dir/signing-certificate.txt" \
+            | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          expected_cert="E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
+          if [ "$actual_cert" != "$expected_cert" ]; then
+            echo "Unexpected signing certificate: $actual_cert" >&2
+            exit 1
+          fi
+
+          apk_sha=$(cut -d' ' -f1 "$out_dir/GBModer-v${VERSION_NAME}-debug.apk.sha256")
+          apk_bytes=$(stat -c%s "$versioned_apk")
+          cat > "$out_dir/build-metadata.txt" <<EOF
+          repository=${GITHUB_REPOSITORY}
+          branch=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
+          commit=${GITHUB_SHA}
+          versionName=${VERSION_NAME}
+          versionCode=${VERSION_CODE}
+          ciRunId=${GITHUB_RUN_ID}
+          ciJob=${GITHUB_JOB}
+          buildAndTests=PASS
+          apkFile=GBModer-v${VERSION_NAME}-debug.apk
+          apkBytes=${apk_bytes}
+          apkSha256=${apk_sha}
+          signerCertificateSha256=E6:48:32:00:71:B8:AB:0D:E0:38:F7:67:90:06:4B:99:46:1B:67:D7:DB:E7:CE:75:06:D1:2A:5F:4F:A8:84:D8
+          EOF
 
       - name: Upload versioned APK artifact
         if: env.BUILD_STATUS == '0'
         uses: actions/upload-artifact@v4
         with:
           name: GBModer-v${{ env.VERSION_NAME }}-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug.apk.sha256
+            app/build/outputs/apk/debug/signing-certificate.txt
+            app/build/outputs/apk/debug/build-metadata.txt
           if-no-files-found: error
 
       - name: Publish APK or failure evidence into repository
         if: always() && github.event_name == 'push'
         run: |
           mkdir -p dist
-          if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk dist/GBModer-debug.apk
-            cp app/build/outputs/apk/debug/app-debug.apk "dist/GBModer-v${VERSION_NAME}-debug.apk"
+          if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk" ]; then
+            cp "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk" dist/GBModer-debug.apk
+            cp "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk" "dist/GBModer-v${VERSION_NAME}-debug.apk"
+            cp "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk.sha256" "dist/GBModer-v${VERSION_NAME}-debug.apk.sha256"
+            cp app/build/outputs/apk/debug/signing-certificate.txt dist/signing-certificate.txt
+            cp app/build/outputs/apk/debug/build-metadata.txt dist/build-metadata.txt
             printf 'versionName=%s\nversionCode=%s\n' "$VERSION_NAME" "$VERSION_CODE" > dist/version.txt
             rm -f dist/build-failure.log
           else

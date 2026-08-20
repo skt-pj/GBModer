@@ -81,25 +81,29 @@ interface GbModerUiActions {
 }
 
 class GbModerUiState {
-    var status by mutableStateOf("停止中")
-        private set
+    private var statusState by mutableStateOf("停止中")
+    private var runningState by mutableStateOf(false)
+    private var accessibilityReadyState by mutableStateOf(false)
 
-    var running by mutableStateOf(false)
-        private set
+    val status: String
+        get() = statusState
 
-    var accessibilityReady by mutableStateOf(false)
-        private set
+    val running: Boolean
+        get() = runningState
+
+    val accessibilityReady: Boolean
+        get() = accessibilityReadyState
 
     fun setStatus(value: String) {
-        status = value
+        statusState = value
     }
 
     fun setRunning(value: Boolean) {
-        running = value
+        runningState = value
     }
 
     fun setAccessibilityReady(value: Boolean) {
-        accessibilityReady = value
+        accessibilityReadyState = value
     }
 }
 

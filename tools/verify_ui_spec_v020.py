@@ -75,4 +75,11 @@ if "setContentView(buildContentView())" in generated:
     raise SystemExit("FAIL UI-001: retired LinearLayout UI is still installed")
 print("PASS UI-001 retired LinearLayout not installed")
 
+# Startup/lifecycle preconditions for ComposeView.
+require(generated, "import androidx.activity.ComponentActivity;", "START-001 ComponentActivity import")
+require(generated, "public class MainActivity extends ComponentActivity", "START-001 ComponentActivity base class")
+if "public class MainActivity extends Activity" in generated:
+    raise SystemExit("FAIL START-002: generated MainActivity still extends android.app.Activity")
+print("PASS START-002 android.app.Activity base removed")
+
 print("UI SPEC AUTOMATED GATE: PASS")

@@ -52,10 +52,10 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Build signed debug APK and capture log
+      - name: Test canonical font_min renderer and build signed debug APK
         run: |
           set +e
-          gradle --no-daemon :app:assembleDebug 2>&1 | tee build.log
+          gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"
           exit 0

@@ -40,8 +40,8 @@
 | UI-026 | Bridge | status受信 | Java側からstatus更新 | Composeへ即時反映 | unit/UI |
 | UI-027 | ログ | ログ同期導線 | 詳細→ログ同期 | 既存ログ同期処理を呼ぶ | integration |
 | UI-028 | ADB | ADB導線 | 詳細→ADB手順 | 既存ADB手順を表示 | integration |
-| UI-029 | Adaptive | Compact | 幅<600dp相当 | 1ペイン | UI test/manual |
-| UI-030 | Adaptive | Expanded | 幅>=840dp相当 | 左プレビュー+右設定の2ペイン | UI test/manual |
+| UI-029 | Adaptive | Compact | 幅<840dp | 1ペイン | UI test/manual |
+| UI-030 | Adaptive | Expanded | 幅>=840dp | 左プレビュー+右設定の2ペイン | UI test/manual |
 | UI-031 | Preview | 文字見本 | Expanded | GAME BOY/数字/英字が表示 | UI test |
 | UI-032 | Preview | DMGパレット | Expanded | 0,1,2,3の4階調サンプル | UI test |
 | UI-033 | Theme | Light | Light theme | 読めるコントラスト | screenshot/manual |
@@ -50,9 +50,9 @@
 | UI-036 | A11y | 200%文字 | fontScale 2.0 | 重要項目が切れずスクロール到達可能 | manual |
 | UI-037 | A11y | TalkBack | TalkBack ON | ボタン/Slider/Switchの意味と状態を取得可能 | manual |
 | UI-038 | A11y | 色非依存 | 実行/停止状態 | 状態が文字でも判別可能 | static/manual |
-| BUILD-001 | Toolchain | compileSdk | Gradle設定 | 37 | static |
-| BUILD-002 | Toolchain | AGP | Gradle設定 | 9.2.1 | static |
-| BUILD-003 | Toolchain | Gradle | CI | 9.4.1 | static/CI |
+| BUILD-001 | Toolchain | compileSdk | Gradle設定/CI | 37。CI packageはandroid-37.0 | static/CI |
+| BUILD-002 | Toolchain | AGP | Gradle設定 | 9.4.0 | static |
+| BUILD-003 | Toolchain | Gradle | CI | 9.6.0 | static/CI |
 | BUILD-004 | Library | Compose BOM | dependency | 2026.08.00 | static |
 | BUILD-005 | Library | Material3 | resolved dependency | 1.4.0系 | dependency/CI |
 | BUILD-006 | Library | Activity Compose | dependency | 1.13.0 | static |

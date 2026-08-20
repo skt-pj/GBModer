@@ -17,15 +17,15 @@ ui = (ROOT / "app/src/main/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt").read_t
 generated = (ROOT / "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MainActivity.java").read_text()
 
 # Toolchain / current stable stack
-require(root_build, "com.android.application' version '9.4.0'", "BUILD-002 AGP 9.4.0")
+require(root_build, "com.android.application' version '9.3.0'", "BUILD-002 AGP 9.3.0")
 require(root_build, "org.jetbrains.kotlin.plugin.compose' version '2.3.21'", "BUILD-008 Compose compiler 2.3.21")
 require(app_build, "compileSdk 37", "BUILD-001 compileSdk 37")
 require(app_build, "compose-bom:2026.08.00", "BUILD-004 Compose BOM 2026.08.00")
 require(app_build, "androidx.compose.material3:material3", "BUILD-005 Material 3")
 require(app_build, "androidx.activity:activity-compose:1.13.0", "BUILD-006 Activity Compose 1.13.0")
 require(app_build, "androidx.compose.material3.adaptive:adaptive:1.3.0", "BUILD-007 Adaptive 1.3.0")
-require(workflow, "gradle-version: '9.6.0'", "BUILD-003 Gradle 9.6.0")
-require(workflow, 'platforms;android-37', "BUILD-001 CI API 37")
+require(workflow, "gradle-version: '9.5.0'", "BUILD-003 Gradle 9.5.0")
+require(workflow, 'platforms;android-37.0', "BUILD-001 CI API 37.0")
 
 # Image-derived UI requirements
 require(ui, "Scaffold(", "UI-002 Scaffold")

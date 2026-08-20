@@ -32,6 +32,13 @@ need(capture, "reason=content_revision_before_copy", "drop before copy")
 need(capture, "reason=content_revision_before_present", "drop before present")
 need(capture, "setExternalTextRecognitionActive(false)", "cleanup state")
 
+show_start = accessibility.find("    public void showFrame(Bitmap frame) {")
+show_end = accessibility.find("    private void showFrame(Bitmap frame, Rect bounds) {", show_start)
+if show_start < 0 or show_end < 0:
+    raise SystemExit("FAIL MediaProjection showFrame method")
+show_body = accessibility[show_start:show_end]
+need(show_body, "captureVisible = true;", "fresh MediaProjection frame restores overlay visibility")
+
 filter_pos = capture.find("GameBoyFilter.apply(")
 text_pos = capture.find("applyFontMinTextOverlay(", filter_pos)
 if filter_pos < 0 or text_pos <= filter_pos:

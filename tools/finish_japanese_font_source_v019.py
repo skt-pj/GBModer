@@ -112,11 +112,10 @@ glyph_chunks = java_chunks(glyph_bytes)
 
 japanese_font = f'''package com.sktpj.gbmoder;
 
-import android.util.Base64;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.zip.InflaterInputStream;
 
 /**
@@ -206,7 +205,7 @@ public final class JapaneseFont8x8 {{
         for (String chunk : chunks) {{
             encoded.append(chunk);
         }}
-        byte[] compressed = Base64.decode(encoded.toString(), Base64.DEFAULT);
+        byte[] compressed = Base64.getDecoder().decode(encoded.toString());
         try (InflaterInputStream inflater = new InflaterInputStream(new ByteArrayInputStream(compressed));
              ByteArrayOutputStream output = new ByteArrayOutputStream(expectedLength)) {{
             byte[] buffer = new byte[8192];
@@ -231,8 +230,6 @@ public final class JapaneseFont8x8 {{
 '''
 write("JapaneseFont8x8.java", japanese_font)
 
-# Expose one deterministic ASCII glyph operation. The canonical render path and
-# its reference vector remain unchanged.
 renderer = read("FontMinRenderer.java")
 ascii_method = r'''    public static boolean drawLogicalAsciiGlyph(
             byte[] framebuffer,
@@ -376,8 +373,6 @@ public final class MixedGbTextRenderer {
 '''
 write("MixedGbTextRenderer.java", mixed_renderer)
 
-# v0.1.18 already builds/masks the canonical 160x144 logical text plane. Swap
-# only the live text renderer so Japanese is no longer discarded by strictAscii.
 accessibility = read("FilterAccessibilityService.java")
 replacements = {
     "FontMinRenderer.getTextTileWidth(text)": "MixedGbTextRenderer.getTextTileWidth(text)",

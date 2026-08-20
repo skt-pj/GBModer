@@ -24,16 +24,18 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-# MainActivity: keep the existing image-only path as the default (OFF) and add
-# one explicit UI switch that enables Accessibility text extraction + 8x8 redraw.
+# MainActivity: expose the generated v0.1.16 MediaProjection route and the
+# Android 14+ Accessibility-window route as an explicit UI choice. Text
+# recognition/redraw is independently switchable and defaults OFF.
 main = read("MainActivity.java")
 main = replace_once(
     main,
     "    private boolean uiDither = true;\n    private boolean pendingStartAfterAccessibility = false;\n",
     "    private boolean uiDither = true;\n"
+    "    private int uiCaptureRoutePosition = 0;\n"
     "    private boolean uiTextRecognitionEnabled = false;\n"
     "    private boolean pendingStartAfterAccessibility = false;\n",
-    "text route state field",
+    "route state fields",
 )
 main = replace_once(
     main,
@@ -64,25 +66,50 @@ main = replace_once(
 
         LinearLayout routeRoot = new LinearLayout(this);
         routeRoot.setOrientation(LinearLayout.VERTICAL);
+        routeRoot.setPadding(dp(12), dp(20), dp(12), 0);
+
+        TextView routeLabel = text("処理ルート", 13, true);
+        routeRoot.addView(routeLabel, matchWrap());
+
+        Spinner captureRouteSpinner = new Spinner(this);
+        String[] captureRoutes = {
+                "MediaProjection（既存ルート）",
+                "Accessibility Window（Android 14+）"
+        };
+        ArrayAdapter<String> captureRouteAdapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                captureRoutes
+        );
+        captureRouteAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        captureRouteSpinner.setAdapter(captureRouteAdapter);
+        captureRouteSpinner.setSelection(uiCaptureRoutePosition);
+        captureRouteSpinner.setContentDescription("画面処理ルート選択");
+        captureRouteSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                uiCaptureRoutePosition = position;
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
+        routeRoot.addView(captureRouteSpinner, matchWrap());
+
         Switch textRecognitionSwitch = new Switch(this);
-        textRecognitionSwitch.setText("文字認識ルート\nOFF: 既存ルート / ON: 文字取得→8×8再描画");
+        textRecognitionSwitch.setText("文字認識・8×8再描画");
         textRecognitionSwitch.setTextSize(13f);
         textRecognitionSwitch.setChecked(uiTextRecognitionEnabled);
-        textRecognitionSwitch.setPadding(dp(16), dp(28), dp(16), dp(8));
-        textRecognitionSwitch.setContentDescription("文字認識ルート切替。オフは既存画像フィルター、オンは文字認識と8×8再描画");
+        textRecognitionSwitch.setPadding(0, dp(6), 0, dp(6));
+        textRecognitionSwitch.setContentDescription("文字認識と8×8フォント再描画のオンオフ");
         textRecognitionSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
             uiTextRecognitionEnabled = checked;
             setUiStatus(checked
-                    ? "文字認識ルート: ON（文字取得→8×8再描画）"
-                    : "文字認識ルート: OFF（既存画像フィルター）");
+                    ? "文字認識・8×8再描画: ON"
+                    : "文字認識・8×8再描画: OFF");
         });
-        routeRoot.addView(
-                textRecognitionSwitch,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-        );
+        routeRoot.addView(textRecognitionSwitch, matchWrap());
         routeRoot.addView(
                 composeView,
                 new LinearLayout.LayoutParams(
@@ -96,19 +123,42 @@ main = replace_once(
 
     private View buildContentView() {
 ''',
-    "text route UI switch",
+    "route selection UI",
 )
 main = replace_once(
     main,
-    '''            accessibilityService.startWindowFilter(
-                    getSelectedMode(),
-                    getSelectedResolution(),
-                    getBrightness(),
-                    getContrast(),
-                    isUiDitherEnabled()
-            );
+    '''    private void startFilterForCurrentPlatform() {
+        pendingStartAfterAccessibility = false;
+
+        FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+        if (accessibilityService == null) {
+            setUiStatus("ユーザー補助サービスに接続できません");
+            return;
+        }
+
+        // Android 14+ also uses MediaProjection now. Single-app projection excludes
+        // GBModer's accessibility overlay from the captured content and avoids the
+        // AccessibilityService screenshot interval limit seen in performance logs.
+        accessibilityService.stopWindowFilter();
+        accessibilityService.clearOverlay();
+        requestScreenCapture();
+    }
 ''',
-    '''            accessibilityService.startWindowFilter(
+    '''    private void startFilterForCurrentPlatform() {
+        pendingStartAfterAccessibility = false;
+
+        FilterAccessibilityService accessibilityService = FilterAccessibilityService.getInstance();
+        if (accessibilityService == null) {
+            setUiStatus("ユーザー補助サービスに接続できません");
+            return;
+        }
+
+        if (uiCaptureRoutePosition == 1) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                setUiStatus("Accessibility WindowルートはAndroid 14以降が必要です");
+                return;
+            }
+            accessibilityService.startWindowFilter(
                     getSelectedMode(),
                     getSelectedResolution(),
                     getBrightness(),
@@ -116,8 +166,17 @@ main = replace_once(
                     isUiDitherEnabled(),
                     isUiTextRecognitionEnabled()
             );
+            setUiRunning(true);
+            setUiStatus("Accessibility Windowルートで開始しました");
+            return;
+        }
+
+        accessibilityService.stopWindowFilter();
+        accessibilityService.clearOverlay();
+        requestScreenCapture();
+    }
 ''',
-    "accessibility route flag",
+    "selectable capture routing",
 )
 main = replace_once(
     main,
@@ -131,7 +190,7 @@ main = replace_once(
         );
         startForegroundService(serviceIntent);
 ''',
-    "media projection route flag",
+    "media projection text flag",
 )
 main = replace_once(
     main,
@@ -156,15 +215,18 @@ main = replace_once(
 write("MainActivity.java", main)
 
 
-# Android 14+ accessibility-window path: run text extraction after the normal
-# image filter and before the overlay is posted. OFF therefore remains exactly
-# the existing image-only processing route.
+# Accessibility-window path. When text recognition is ON, force the CPU path
+# because the GPU hardware path filters directly at draw time and cannot apply
+# the logical font_min/Misaki text plane before presentation.
 accessibility = read("FilterAccessibilityService.java")
 accessibility = replace_once(
     accessibility,
-    "    private boolean windowFilterDither = true;\n    private long performanceFrameIndex = 0L;\n",
+    "    private boolean windowFilterDither = true;\n"
+    "    private boolean gpuWindowPathDisabled = false;\n"
+    "    private long performanceFrameIndex = 0L;\n",
     "    private boolean windowFilterDither = true;\n"
     "    private boolean windowTextRecognitionEnabled = false;\n"
+    "    private boolean gpuWindowPathDisabled = false;\n"
     "    private long performanceFrameIndex = 0L;\n",
     "accessibility route field",
 )
@@ -193,14 +255,29 @@ accessibility = replace_once(
     accessibility,
     '''        windowFilterContrast = contrast;
         windowFilterDither = dither;
+        gpuWindowPathDisabled = false;
         windowFilterRunning = true;
 ''',
     '''        windowFilterContrast = contrast;
         windowFilterDither = dither;
         windowTextRecognitionEnabled = textRecognitionEnabled;
+        gpuWindowPathDisabled = false;
         windowFilterRunning = true;
 ''',
     "accessibility route assignment",
+)
+accessibility = replace_once(
+    accessibility,
+    '''        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && !gpuWindowPathDisabled
+                && !GameBoyFilter.MODE_GBC.equals(windowFilterMode);
+''',
+    '''        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && !windowTextRecognitionEnabled
+                && !gpuWindowPathDisabled
+                && !GameBoyFilter.MODE_GBC.equals(windowFilterMode);
+''',
+    "disable gpu path during text redraw",
 )
 accessibility = replace_once(
     accessibility,
@@ -214,6 +291,19 @@ accessibility = replace_once(
                 + " source=takeScreenshotOfWindow");
 ''',
     "accessibility start log route",
+)
+accessibility = replace_once(
+    accessibility,
+    '''                                                + " mode=" + windowFilterMode
+                                                + " resolution=" + windowFilterResolution
+                                                + " source=" + sourceWidth + "x" + sourceHeight
+''',
+    '''                                                + " mode=" + windowFilterMode
+                                                + " resolution=" + windowFilterResolution
+                                                + " text_recognition_enabled=" + windowTextRecognitionEnabled
+                                                + " source=" + sourceWidth + "x" + sourceHeight
+''',
+    "gpu route frame log",
 )
 accessibility = replace_once(
     accessibility,
@@ -266,7 +356,7 @@ accessibility = replace_once(
                                 + " text_recognition_enabled=" + textRecognitionEnabled
                                 + " source=" + sourceWidth + "x" + sourceHeight
 ''',
-    "accessibility route frame log",
+    "cpu route frame log",
 )
 accessibility = replace_once(
     accessibility,
@@ -285,8 +375,7 @@ accessibility = replace_once(
 write("FilterAccessibilityService.java", accessibility)
 
 
-# MediaProjection path: the same UI switch controls the pre-existing font_min /
-# Misaki text replacement so OFF consistently means image-only on every OS path.
+# Existing MediaProjection path: use the same independent text switch.
 capture = read("FilterCaptureService.java")
 capture = replace_once(
     capture,
@@ -347,4 +436,4 @@ capture = replace_once(
 )
 write("FilterCaptureService.java", capture)
 
-print("v0.1.22 selectable text-recognition route applied")
+print("v0.1.22 selectable capture and text-recognition routes applied")

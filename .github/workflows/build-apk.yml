@@ -30,13 +30,15 @@ jobs:
           java-version: '17'
 
       - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '15859902'
 
       - name: Install Android SDK packages
-        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: yes | sdkmanager --channel=3 "platforms;android-37.0" "build-tools;36.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '9.5.0'
 
       - name: Restore stable development signing key
         run: |
@@ -52,11 +54,15 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test canonical font_min renderer and build signed debug APK
+      - name: Test UI specification, renderers, and build signed debug APK
         run: |
           set +e
           gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_ui_spec_v020.py
+            status=$?
+          fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"
           exit 0
 
@@ -90,6 +96,6 @@ jobs:
             git push origin HEAD:main
           fi
 
-      - name: Fail workflow when Gradle build failed
+      - name: Fail workflow when build or UI verification failed
         if: env.BUILD_STATUS != '0'
         run: exit 1

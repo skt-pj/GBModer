@@ -10,6 +10,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_capture_source_v016.py'))
     inputs.file(rootProject.file('tools/finish_font_min_source_v017.py'))
     inputs.file(rootProject.file('tools/finish_font_min_source_v018.py'))
+    inputs.file(rootProject.file('tools/finish_japanese_font_source_v019.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_gpu_source.py').absolutePath,
@@ -34,6 +35,11 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
         project.exec {
             commandLine 'python3',
                     rootProject.file('tools/finish_font_min_source_v018.py').absolutePath,
+                    generatedGpuSourceDir.absolutePath
+        }
+        project.exec {
+            commandLine 'python3',
+                    rootProject.file('tools/finish_japanese_font_source_v019.py').absolutePath,
                     generatedGpuSourceDir.absolutePath
         }
     }

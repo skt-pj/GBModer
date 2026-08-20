@@ -51,8 +51,8 @@
 | UI-037 | A11y | TalkBack | TalkBack ON | ボタン/Slider/Switchの意味と状態を取得可能 | manual |
 | UI-038 | A11y | 色非依存 | 実行/停止状態 | 状態が文字でも判別可能 | static/manual |
 | BUILD-001 | Toolchain | compileSdk | Gradle設定/CI | 37。CI packageはandroid-37.0 | static/CI |
-| BUILD-002 | Toolchain | AGP | Gradle設定 | 9.4.0 | static |
-| BUILD-003 | Toolchain | Gradle | CI | 9.6.0 | static/CI |
+| BUILD-002 | Toolchain | AGP | Gradle設定 | 9.3.0 stable | static |
+| BUILD-003 | Toolchain | Gradle | CI | 9.5.0 | static/CI |
 | BUILD-004 | Library | Compose BOM | dependency | 2026.08.00 | static |
 | BUILD-005 | Library | Material3 | resolved dependency | 1.4.0系 | dependency/CI |
 | BUILD-006 | Library | Activity Compose | dependency | 1.13.0 | static |

@@ -22,7 +22,7 @@ public class JapaneseFont8x8Test {
         byte[] frame = new byte[FontMinRenderer.SCREEN_WIDTH * FontMinRenderer.SCREEN_HEIGHT];
         String text = "日本語GAMEBOY";
 
-        assertEquals(9, MixedGbTextRenderer.getTextTileWidth(text));
+        assertEquals(10, MixedGbTextRenderer.getTextTileWidth(text));
         assertEquals(1, MixedGbTextRenderer.getTextTileHeight(text));
         assertTrue(MixedGbTextRenderer.canRenderText(text, 1, 1));
         assertTrue(MixedGbTextRenderer.drawLogicalText(frame, text, 1, 1));

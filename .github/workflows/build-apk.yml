@@ -54,13 +54,17 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test UI specification, renderers, and build signed debug APK
+      - name: Test UI specification, text synchronization, renderers, and build signed debug APK
         run: |
           set +e
           gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           if [ "$status" = "0" ]; then
             python3 tools/verify_ui_spec_v020.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_text_scroll_sync_v024.py
             status=$?
           fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"

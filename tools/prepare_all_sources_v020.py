@@ -23,10 +23,11 @@ commands = [
     [sys.executable, str(repo / "tools/finish_text_layout_source_v023.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_text_scroll_sync_source_v024.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_route_insets_source_v025.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_compose_controls_source_v026.py"), str(generated_root)],
 ]
 
 for command in commands:
     print("+", " ".join(command), flush=True)
     subprocess.run(command, cwd=repo, check=True)
 
-print("all generated sources prepared for v0.1.25", flush=True)
+print("all generated sources prepared for v0.1.26", flush=True)

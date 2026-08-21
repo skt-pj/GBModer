@@ -42,7 +42,11 @@ need(gpu_video, "displaySourceWidth", "GPU video display-oriented source dimensi
 need(gpu_video, "GameBoyFilter.getCenterCropBounds", "GPU video center crop")
 need(gpu_video, "cropLeft", "GPU video crop left")
 need(gpu_video, "cropRight", "GPU video crop right")
-need(gpu_video, "textureCoordinates(\n                    rotation,", "GPU video crop coordinates sent to shader")
+need(
+    gpu_video,
+    "VideoGpuConverter.mapDisplayUvForRotation(\n                    rotation,",
+    "GPU video crop coordinates sent to corrected rotation mapper",
+)
 need(gpu_video, '" center_crop=true"', "GPU video crop logged")
 if "textureCoordinates(rotation)" in gpu_video:
     raise SystemExit("FAIL GPU video still maps the whole source directly to fixed output")

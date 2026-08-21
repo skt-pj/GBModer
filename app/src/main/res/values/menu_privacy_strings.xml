@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="menu_title">Menu</string>
+    <string name="menu_description">Diagnostics, subscription status, libraries, privacy, and app information.</string>
+    <string name="menu_diagnostics_title">Diagnostics</string>
+    <string name="menu_diagnostics_description">Compare video processing paths, codecs, GPU support, frame timing, and export logs.</string>
+    <string name="menu_libraries_title">Libraries</string>
+    <string name="menu_libraries_description">View the main runtime, build, and test libraries used by GBModer.</string>
+    <string name="menu_privacy_title">Privacy policy</string>
+    <string name="menu_privacy_description">Review how screen content, selected files, diagnostics, and billing information are handled.</string>
+    <string name="menu_about_title">App information</string>
+    <string name="menu_version_format">Version %1$s</string>
+    <string name="menu_package_format">Package %1$s</string>
+    <string name="menu_back">Back</string>
+
+    <string name="libraries_page_description">Versions are taken from the current app build configuration. Runtime libraries are distinguished from build/test tools.</string>
+    <string name="library_scope_runtime">Used at runtime</string>
+    <string name="library_scope_build_test">Build/test only</string>
+
+    <string name="privacy_policy_intro">GBModer by skt-pj processes screen and media content primarily on the device. This policy explains the data paths used by the app.</string>
+    <string name="privacy_section_data_access">Data access</string>
+    <string name="privacy_data_access_body">GBModer does not create user accounts and does not include advertising or analytics SDKs. The app only accesses data required for features the user explicitly starts.</string>
+    <string name="privacy_section_accessibility">Accessibility service</string>
+    <string name="privacy_accessibility_body">When enabled by the user, the accessibility service can read on-screen text and window content so GBModer can redraw text for low-resolution display and provide its compatibility capture path. This content is processed on the device and is not sent to a developer-operated server.</string>
+    <string name="privacy_section_screen_capture">Screen capture</string>
+    <string name="privacy_screen_capture_body">Live filtering uses Android MediaProjection only after the user approves screen or app sharing. Captured frames are processed on the device for the filter and are not uploaded to a developer-operated server.</string>
+    <string name="privacy_section_files">Selected media files</string>
+    <string name="privacy_files_body">Photos, videos, and supported 3D files are opened only after the user selects them through Android's document picker. Conversion is performed on the device and output is written only to the destination chosen by the user.</string>
+    <string name="privacy_section_billing">Google Play billing</string>
+    <string name="privacy_billing_body">Live mode subscriptions are processed by Google Play. GBModer reads product details and purchase/subscription state from Google Play to decide whether live mode is available. GBModer does not receive or store card numbers or other payment credentials.</string>
+    <string name="privacy_section_diagnostics">Diagnostics and logs</string>
+    <string name="privacy_diagnostics_body">Performance and diagnostic information is generated on the device. Reports or logs leave the app only when the user explicitly exports them with Android's document picker. If the user chooses a cloud document provider, that provider handles the selected destination.</string>
+    <string name="privacy_section_network">External transmission</string>
+    <string name="privacy_network_body">GBModer does not operate its own analytics, advertising, or content-upload backend. Google Play Billing communicates with Google Play as required for subscription purchases and status.</string>
+    <string name="privacy_section_retention">Storage and retention</string>
+    <string name="privacy_retention_body">GBModer does not retain user content on a developer server. Locally created output files and exported logs remain where the user saved them until the user deletes them. Android app backup is disabled for GBModer.</string>
+    <string name="privacy_section_contact">Contact</string>
+    <string name="privacy_contact_body">Developer: skt-pj / GBModer. Privacy questions and reports can be submitted through the public GBModer GitHub issue tracker.</string>
+    <string name="privacy_last_updated">Last updated: 2026-08-21</string>
+
+    <string name="accessibility_disclosure_title">Accessibility service access</string>
+    <string name="accessibility_disclosure_body">GBModer uses Android's accessibility service to read on-screen text and window content for the “Make text easier to read” feature and the compatibility capture path. The accessed content is processed only on this device for those features and is not sent to a developer-operated server. You can use photo, video, and 3D conversion without granting this access.</string>
+    <string name="accessibility_disclosure_accept">Agree and open settings</string>
+    <string name="accessibility_disclosure_decline">Do not agree</string>
+</resources>

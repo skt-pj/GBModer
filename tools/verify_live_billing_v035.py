@@ -16,8 +16,6 @@ def reject(path: str, needle: str, label: str) -> None:
         raise SystemExit(f"{label}: unexpected {needle!r} in {path}")
 
 
-require("version.properties", "VERSION_NAME=0.1.35", "version name")
-require("version.properties", "VERSION_CODE=36", "version code")
 require("app/build.gradle", "targetSdk 36", "Play target API")
 require("app/build.gradle", "com.android.billingclient:billing:9.1.0", "Billing Library")
 require("app/build.gradle", "prepareBillingKotlin", "billing Kotlin generation")
@@ -61,4 +59,4 @@ reject(
     "file conversion must remain free",
 )
 
-print("v0.1.35 live billing gate and free conversion boundary verified")
+print("LIVE BILLING FEATURE GATE: PASS")

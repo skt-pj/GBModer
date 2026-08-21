@@ -3,6 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
+def debugFeaturesEnabled = (project.findProperty('GBMODER_DEBUG_FEATURES') ?: 'false').toString().toBoolean()
+
 def generatedGpuSourceDir = file("$buildDir/generated/gbmoderGpu/java")
 def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.dir('src/main/java')
@@ -29,6 +31,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_portrait_video_v038.py'))
     inputs.file(rootProject.file('tools/finish_portrait_orientation_v039.py'))
     inputs.file(rootProject.file('tools/finish_resolution_default_v040.py'))
+    inputs.file(rootProject.file('tools/finish_debug_features_v041.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,
@@ -40,9 +43,11 @@ def generatedBillingKotlinDir = file("$buildDir/generated/gbmoderBilling/kotlin"
 def prepareBillingKotlin = tasks.register('prepareBillingKotlin', Exec) {
     inputs.dir('src/main/kotlin')
     inputs.file(rootProject.file('tools/prepare_billing_kotlin_v035.py'))
+    inputs.file(rootProject.file('tools/prepare_billing_release_v041.py'))
+    inputs.file(rootProject.file('tools/finish_release_ui_v041.py'))
     outputs.dir(generatedBillingKotlinDir)
     commandLine 'python3',
-            rootProject.file('tools/prepare_billing_kotlin_v035.py').absolutePath,
+            rootProject.file('tools/prepare_billing_release_v041.py').absolutePath,
             file('src/main/kotlin').absolutePath,
             generatedBillingKotlinDir.absolutePath
 }
@@ -66,6 +71,8 @@ android {
         targetSdk 36
         versionCode 1
         versionName '0.1.0'
+        buildConfigField 'boolean', 'DEBUG_FEATURES', debugFeaturesEnabled.toString()
+        manifestPlaceholders = [debugFeaturesEnabled: debugFeaturesEnabled.toString()]
     }
 
     buildFeatures {

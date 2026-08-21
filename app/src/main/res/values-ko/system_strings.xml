@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_description">GBModer가 다른 앱 화면을 필터링하는 동안 표시되는 지속 알림입니다.</string>
+    <string name="whole_screen_not_supported">전체 화면 공유는 사용할 수 없습니다. “앱 하나”를 선택하세요.</string>
+</resources>

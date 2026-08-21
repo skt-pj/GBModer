@@ -54,10 +54,10 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test common UI, filter, billing, unified conversion, GPU video, aspect preservation, diagnostics, and build signed debug APK
+      - name: Test UI, billing, menu, privacy, conversion, GPU video, diagnostics, and build signed release APK/AAB
         run: |
           set +e
-          gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
+          gradle --no-daemon :app:testDebugUnitTest :app:assembleRelease :app:bundleRelease 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           if [ "$status" = "0" ]; then
             python3 tools/verify_ui_spec_v020.py
@@ -103,23 +103,32 @@ jobs:
             python3 tools/verify_live_billing_v035.py
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_menu_privacy_v036.py
+            status=$?
+          fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"
           exit 0
 
-      - name: Verify APK digest and common signing certificate
+      - name: Verify release APK/AAB digest and common signing certificate
         if: env.BUILD_STATUS == '0'
         run: |
           set -euo pipefail
-          out_dir="app/build/outputs/apk/debug"
-          source_apk="$out_dir/app-debug.apk"
-          versioned_apk="$out_dir/GBModer-v${VERSION_NAME}-debug.apk"
+          apk_dir="app/build/outputs/apk/release"
+          bundle_dir="app/build/outputs/bundle/release"
+          source_apk="$apk_dir/app-release.apk"
+          source_aab="$bundle_dir/app-release.aab"
+          versioned_apk="$apk_dir/GBModer-v${VERSION_NAME}-release.apk"
+          versioned_aab="$bundle_dir/GBModer-v${VERSION_NAME}-release.aab"
           cp "$source_apk" "$versioned_apk"
+          cp "$source_aab" "$versioned_aab"
 
-          sha256sum "$versioned_apk" > "$out_dir/GBModer-v${VERSION_NAME}-debug.apk.sha256"
+          sha256sum "$versioned_apk" > "$apk_dir/GBModer-v${VERSION_NAME}-release.apk.sha256"
+          sha256sum "$versioned_aab" > "$bundle_dir/GBModer-v${VERSION_NAME}-release.aab.sha256"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$versioned_apk" \
-            | tee "$out_dir/signing-certificate.txt"
+            | tee "$apk_dir/signing-certificate.txt"
 
-          actual_cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$out_dir/signing-certificate.txt" \
+          actual_cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$apk_dir/signing-certificate.txt" \
             | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
           expected_cert="E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
           if [ "$actual_cert" != "$expected_cert" ]; then
@@ -127,9 +136,11 @@ jobs:
             exit 1
           fi
 
-          apk_sha=$(cut -d' ' -f1 "$out_dir/GBModer-v${VERSION_NAME}-debug.apk.sha256")
+          apk_sha=$(cut -d' ' -f1 "$apk_dir/GBModer-v${VERSION_NAME}-release.apk.sha256")
+          aab_sha=$(cut -d' ' -f1 "$bundle_dir/GBModer-v${VERSION_NAME}-release.aab.sha256")
           apk_bytes=$(stat -c%s "$versioned_apk")
-          cat > "$out_dir/build-metadata.txt" <<EOF
+          aab_bytes=$(stat -c%s "$versioned_aab")
+          cat > "$apk_dir/build-metadata.txt" <<EOF
           repository=${GITHUB_REPOSITORY}
           branch=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
           commit=${GITHUB_SHA}
@@ -138,34 +149,41 @@ jobs:
           ciRunId=${GITHUB_RUN_ID}
           ciJob=${GITHUB_JOB}
           buildAndTests=PASS
-          apkFile=GBModer-v${VERSION_NAME}-debug.apk
+          apkFile=GBModer-v${VERSION_NAME}-release.apk
           apkBytes=${apk_bytes}
           apkSha256=${apk_sha}
+          aabFile=GBModer-v${VERSION_NAME}-release.aab
+          aabBytes=${aab_bytes}
+          aabSha256=${aab_sha}
           signerCertificateSha256=E6:48:32:00:71:B8:AB:0D:E0:38:F7:67:90:06:4B:99:46:1B:67:D7:DB:E7:CE:75:06:D1:2A:5F:4F:A8:84:D8
           EOF
 
-      - name: Upload versioned APK artifact
+      - name: Upload versioned release APK and Play AAB artifact
         if: env.BUILD_STATUS == '0'
         uses: actions/upload-artifact@v4
         with:
-          name: GBModer-v${{ env.VERSION_NAME }}-debug
+          name: GBModer-v${{ env.VERSION_NAME }}-release
           path: |
-            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug.apk
-            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug.apk.sha256
-            app/build/outputs/apk/debug/signing-certificate.txt
-            app/build/outputs/apk/debug/build-metadata.txt
+            app/build/outputs/apk/release/GBModer-v${{ env.VERSION_NAME }}-release.apk
+            app/build/outputs/apk/release/GBModer-v${{ env.VERSION_NAME }}-release.apk.sha256
+            app/build/outputs/apk/release/signing-certificate.txt
+            app/build/outputs/apk/release/build-metadata.txt
+            app/build/outputs/bundle/release/GBModer-v${{ env.VERSION_NAME }}-release.aab
+            app/build/outputs/bundle/release/GBModer-v${{ env.VERSION_NAME }}-release.aab.sha256
           if-no-files-found: error
 
-      - name: Publish APK or failure evidence into repository
+      - name: Publish APK/AAB or failure evidence into repository
         if: always() && github.event_name == 'push'
         run: |
           mkdir -p dist
-          if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk" ]; then
-            cp "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk" dist/GBModer-debug.apk
-            cp "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk" "dist/GBModer-v${VERSION_NAME}-debug.apk"
-            cp "app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk.sha256" "dist/GBModer-v${VERSION_NAME}-debug.apk.sha256"
-            cp app/build/outputs/apk/debug/signing-certificate.txt dist/signing-certificate.txt
-            cp app/build/outputs/apk/debug/build-metadata.txt dist/build-metadata.txt
+          if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk" ]; then
+            cp "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk" dist/GBModer-release.apk
+            cp "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk" "dist/GBModer-v${VERSION_NAME}-release.apk"
+            cp "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk.sha256" "dist/GBModer-v${VERSION_NAME}-release.apk.sha256"
+            cp "app/build/outputs/bundle/release/GBModer-v${VERSION_NAME}-release.aab" "dist/GBModer-v${VERSION_NAME}-release.aab"
+            cp "app/build/outputs/bundle/release/GBModer-v${VERSION_NAME}-release.aab.sha256" "dist/GBModer-v${VERSION_NAME}-release.aab.sha256"
+            cp app/build/outputs/apk/release/signing-certificate.txt dist/signing-certificate.txt
+            cp app/build/outputs/apk/release/build-metadata.txt dist/build-metadata.txt
             printf 'versionName=%s\nversionCode=%s\n' "$VERSION_NAME" "$VERSION_CODE" > dist/version.txt
             rm -f dist/build-failure.log
           else
@@ -176,11 +194,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dist
           if ! git diff --cached --quiet; then
-            git commit -m "build v${VERSION_NAME:-unknown} debug apk"
+            git commit -m "build v${VERSION_NAME:-unknown} release apk/aab"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
 
-      - name: Fail workflow when build or UI verification failed
+      - name: Fail workflow when build or verification failed
         if: env.BUILD_STATUS != '0'
         run: exit 1

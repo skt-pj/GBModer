@@ -44,16 +44,4 @@ replace_ui_once(
 )
 
 ui_path.write_text(ui_text)
-
-billing_path = generated_root / "com/sktpj/gbmoder/LiveModeBilling.kt"
-billing_text = billing_path.read_text()
-old_signature = "override fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?)"
-new_signature = "override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?)"
-if billing_text.count(old_signature) != 1:
-    raise SystemExit(
-        f"billing purchase listener signature: expected exactly one match, got {billing_text.count(old_signature)}"
-    )
-billing_text = billing_text.replace(old_signature, new_signature, 1)
-billing_path.write_text(billing_text)
-
-print("v0.1.35 billing Kotlin UI and Billing 9 listener signature prepared")
+print("v0.1.35 billing Kotlin UI prepared")

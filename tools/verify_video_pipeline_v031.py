@@ -3,6 +3,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 manifest = (root / "app/src/main/AndroidManifest.xml").read_text()
+debug_manifest = (root / "app/src/debug/AndroidManifest.xml").read_text()
 activity = (root / "app/src/main/kotlin/com/sktpj/gbmoder/VideoDiagnosticsActivity.kt").read_text()
 diagnostics = (root / "app/src/main/java/com/sktpj/gbmoder/VideoPipelineDiagnostics.java").read_text()
 encoder_diag = (root / "app/src/main/java/com/sktpj/gbmoder/VideoEncoderDiagnostics.java").read_text()
@@ -17,7 +18,14 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(manifest, 'android:name=".VideoDiagnosticsActivity"', "diagnostics activity registered")
+def reject(text: str, needle: str, label: str) -> None:
+    if needle in text:
+        raise SystemExit(f"FAIL {label}: unexpected {needle!r}")
+    print(f"PASS {label}")
+
+
+reject(manifest, 'android:name=".VideoDiagnosticsActivity"', "formal release excludes diagnostics activity")
+need(debug_manifest, 'android:name=".VideoDiagnosticsActivity"', "debug diagnostics activity registered")
 need(activity, 'testTag("video-diagnostics-screen")', "diagnostics screen")
 need(activity, 'testTag("diagnostics-top-quiet-zone")', "Pixel-safe diagnostics top quiet zone")
 need(activity, "WindowInsets.safeDrawing", "diagnostics safe drawing insets")
@@ -38,7 +46,7 @@ need(encoder_diag, "MediaCodec.createEncoderByType", "actual encoder microbenchm
 need(encoder_diag, "MEASURE_FRAMES", "multi-frame encoder benchmark")
 
 need(localization, '"ログ同期" to R.string.video_diagnostics_action', "main diagnostics button relabeled")
-need(generated_main, "new Intent(MainActivity.this, VideoDiagnosticsActivity.class)", "main diagnostics route")
+need(generated_main, "new Intent(MainActivity.this, VideoDiagnosticsActivity.class)", "main diagnostics route implementation retained")
 need(generated_main, "MediaConversionActivity.EXTRA_RESOLUTION", "diagnostics uses current resolution")
 
 need(generated_converter, "MediaExtractor timingExtractor", "source timing extractor retained for CPU fallback")
@@ -68,4 +76,4 @@ for path in (
     text = (root / path).read_text()
     need(text, 'name="diag_encode_ms"', f"encoder timing localized: {path}")
 
-print("VIDEO PIPELINE DIAGNOSTICS v0.1.31 FEATURE GATE: PASS")
+print("VIDEO PIPELINE DIAGNOSTICS DEBUG FEATURE GATE: PASS")

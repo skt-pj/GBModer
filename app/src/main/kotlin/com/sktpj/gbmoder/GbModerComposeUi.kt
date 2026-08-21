@@ -1,6 +1,8 @@
 package com.sktpj.gbmoder
 
 import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.view.View
 import androidx.compose.foundation.background
@@ -366,6 +368,14 @@ private fun SettingsPane(
             )
         }
 
+        MediaConversionCard(
+            modePosition = modePosition,
+            resolutionPosition = resolutionPosition,
+            brightness = brightness.roundToInt(),
+            contrast = contrast.roundToInt(),
+            dither = dither,
+        )
+
         DiagnosticsCard(
             expanded = detailsExpanded,
             onToggle = { detailsExpanded = !detailsExpanded },
@@ -464,6 +474,122 @@ private fun ToggleSettingRow(
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
+}
+
+@Composable
+private fun MediaConversionCard(
+    modePosition: Int,
+    resolutionPosition: Int,
+    brightness: Int,
+    contrast: Int,
+    dither: Boolean,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Card(modifier = Modifier.fillMaxWidth().testTag("media-conversion-card")) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("ファイル変換", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "現在の表示モード・解像度・明るさ・コントラスト・ディザで変換して保存します。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(
+                onClick = {
+                    launchMediaConversion(
+                        context,
+                        MediaConversionActivity.KIND_PHOTO,
+                        modePosition,
+                        resolutionPosition,
+                        brightness,
+                        contrast,
+                        dither,
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().testTag("convert-photo"),
+            ) {
+                Text("写真を変換")
+            }
+            OutlinedButton(
+                onClick = {
+                    launchMediaConversion(
+                        context,
+                        MediaConversionActivity.KIND_VIDEO,
+                        modePosition,
+                        resolutionPosition,
+                        brightness,
+                        contrast,
+                        dither,
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().testTag("convert-video"),
+            ) {
+                Text("動画を変換")
+            }
+            OutlinedButton(
+                onClick = {
+                    launchMediaConversion(
+                        context,
+                        MediaConversionActivity.KIND_MODEL,
+                        modePosition,
+                        resolutionPosition,
+                        brightness,
+                        contrast,
+                        dither,
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().testTag("convert-model"),
+            ) {
+                Text("3Dモデルを変換")
+            }
+            Text(
+                "3Dモデル: PLY / OBJの頂点色、glTFのマテリアル色・埋込テクスチャ、GLBのマテリアル色に対応します。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun launchMediaConversion(
+    context: Context,
+    kind: String,
+    modePosition: Int,
+    resolutionPosition: Int,
+    brightness: Int,
+    contrast: Int,
+    dither: Boolean,
+) {
+    val mode = when (modePosition) {
+        1 -> GameBoyFilter.MODE_GBC
+        2 -> GameBoyFilter.MODE_GBA
+        3 -> GameBoyFilter.MODE_DS
+        else -> GameBoyFilter.MODE_GB
+    }
+    val resolution = when (resolutionPosition) {
+        1 -> GameBoyFilter.RESOLUTION_GBC
+        2 -> GameBoyFilter.RESOLUTION_GBA
+        3 -> GameBoyFilter.RESOLUTION_DS
+        4 -> GameBoyFilter.RESOLUTION_PHONE_25
+        5 -> GameBoyFilter.RESOLUTION_PHONE_33
+        6 -> GameBoyFilter.RESOLUTION_PHONE_50
+        7 -> GameBoyFilter.RESOLUTION_PHONE_67
+        8 -> GameBoyFilter.RESOLUTION_PHONE_75
+        9 -> GameBoyFilter.RESOLUTION_NATIVE
+        else -> GameBoyFilter.RESOLUTION_GB
+    }
+    context.startActivity(
+        Intent(context, MediaConversionActivity::class.java).apply {
+            putExtra(MediaConversionActivity.EXTRA_KIND, kind)
+            putExtra(MediaConversionActivity.EXTRA_MODE, mode)
+            putExtra(MediaConversionActivity.EXTRA_RESOLUTION, resolution)
+            putExtra(MediaConversionActivity.EXTRA_BRIGHTNESS, brightness)
+            putExtra(MediaConversionActivity.EXTRA_CONTRAST, contrast)
+            putExtra(MediaConversionActivity.EXTRA_DITHER, dither)
+        },
+    )
 }
 
 @Composable

@@ -27,12 +27,14 @@ require(app_build, "androidx.compose.material3.adaptive:adaptive:1.3.0", "BUILD-
 require(workflow, "gradle-version: '9.5.0'", "BUILD-003 Gradle 9.5.0")
 require(workflow, 'platforms;android-37.0', "BUILD-001 CI API 37.0")
 
-# Image-derived UI requirements
+# Current UI requirements
 require(ui, "Scaffold(", "UI-002 Scaffold")
 require(ui, ".verticalScroll(rememberScrollState())", "UI-003 scrollable settings")
 require(ui, "WindowInsets.safeDrawing", "UI-004 safe drawing insets")
-require(ui, "TopAppBar(", "UI-006 TopAppBar")
-require(ui, 'Text("GBModer"', "UI-006 title")
+require(ui, 'testTag("top-quiet-zone")', "UI-006 top quiet zone")
+if "TopAppBar(" in ui or 'Text("GBModer"' in ui:
+    raise SystemExit("FAIL UI-006: top app bar/title must not occupy the Pixel top area")
+print("PASS UI-006 no top app bar/title")
 require(ui, "SingleChoiceSegmentedButtonRow", "UI-010 segmented modes")
 for mode in ('"GB"', '"GBC"', '"GBA"', '"DS"'):
     require(ui, mode, f"UI-010 mode {mode}")
@@ -54,8 +56,8 @@ require(ui, 'mutableStateOf(122f)', "UI-016 contrast initial 122")
 require(ui, 'mutableStateOf(true)', "UI-018 dither initially on")
 require(ui, '"詳細設定・診断"', "UI-020 diagnostics collapsed section")
 require(ui, 'if (state.running) "停止" else "フィルター開始"', "UI-022/023 single primary action")
-require(ui, "currentWindowDpSize()", "UI-029/030 adaptive window size")
-require(ui, "windowSize.width >= 840.dp", "UI-030 expanded threshold")
+require(ui, "LocalWindowInfo.current", "UI-029/030 adaptive window info")
+require(ui, ">= 840.dp", "UI-030 expanded threshold")
 require(ui, '"GAME BOY"', "UI-031 preview")
 require(ui, '"GB (DMG) パレット"', "UI-032 DMG palette")
 require(ui, "dynamicDarkColorScheme", "UI-034/035 dark dynamic theme")

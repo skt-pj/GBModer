@@ -15,8 +15,8 @@ def need(text: str, value: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.32", "version name")
-need(version, "VERSION_CODE=33", "version code")
+need(version, "VERSION_NAME=0.1.33", "version name")
+need(version, "VERSION_CODE=34", "version code")
 need(manifest, 'android:name=".MediaConversionActivity"', "conversion activity registered")
 need(compose, 'testTag("media-conversion-card")', "conversion card")
 need(compose, 'tag = "convert-photo"', "photo action")
@@ -63,4 +63,4 @@ if primary < 0 or media < 0 or diagnostics < 0 or not (primary < media < diagnos
     raise SystemExit("FAIL file conversion must follow the primary filter action and precede diagnostics")
 print("PASS conversion placement")
 
-print("MEDIA CONVERSION v0.1.32 AUTOMATED GATE: PASS")
+print("MEDIA CONVERSION v0.1.33 AUTOMATED GATE: PASS")

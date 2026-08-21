@@ -3,6 +3,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 manifest = (root / "app/src/main/AndroidManifest.xml").read_text()
+debug_manifest = (root / "app/src/debug/AndroidManifest.xml").read_text()
 compose = (root / "app/src/main/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt").read_text()
 conversion = (root / "app/src/main/kotlin/com/sktpj/gbmoder/MediaConversionActivity.kt").read_text()
 unified = (root / "app/src/main/kotlin/com/sktpj/gbmoder/UnifiedConversionControls.kt").read_text()
@@ -27,7 +28,7 @@ need(manifest, 'android:icon="@mipmap/ic_launcher"', "adaptive launcher referenc
 need(manifest, 'android:roundIcon="@mipmap/ic_launcher"', "round launcher reference")
 need(manifest, 'android:localeConfig="@xml/locales_config"', "per-app locale config")
 need(manifest, 'android:label="@string/app_name"', "localized app label")
-need(manifest, 'android:label="@string/accessibility_service_label"', "localized service label")
+need(debug_manifest, 'android:label="@string/accessibility_service_label"', "localized debug service label")
 
 need(adaptive26, '@drawable/ic_launcher_background', "adaptive background")
 need(adaptive26, '@drawable/ic_launcher_foreground', "adaptive foreground")

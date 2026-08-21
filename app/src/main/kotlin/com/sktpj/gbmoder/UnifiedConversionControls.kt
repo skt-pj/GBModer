@@ -1,30 +1,36 @@
 package com.sktpj.gbmoder
 
-import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,8 +39,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
+
+private const val CONVERSION_PREFS = "conversion_output"
+private const val PREF_OUTPUT_TREE_URI = "output_tree_uri"
+private const val PREF_OUTPUT_TREE_NAME = "output_tree_name"
 
 private enum class ConversionKind {
     PHOTO,
@@ -49,6 +60,11 @@ private data class ConversionSource(
     val extension: String,
 )
 
+private data class RememberedOutputFolder(
+    val uriText: String?,
+    val name: String?,
+)
+
 @Composable
 internal fun UnifiedConversionControls(
     options: MediaFileConverter.Options,
@@ -56,14 +72,20 @@ internal fun UnifiedConversionControls(
 ) {
     val context = LocalContext.current
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    val rememberedFolder = remember { loadRememberedOutputFolder(context) }
 
     var sourceUriText by rememberSaveable { mutableStateOf<String?>(null) }
     var sourceName by rememberSaveable { mutableStateOf<String?>(null) }
     var sourceKindName by rememberSaveable { mutableStateOf<String?>(null) }
     var sourceExtension by rememberSaveable { mutableStateOf("") }
-    var outputUriText by rememberSaveable { mutableStateOf<String?>(null) }
-    var outputName by rememberSaveable { mutableStateOf<String?>(null) }
+    var outputTreeUriText by rememberSaveable { mutableStateOf(rememberedFolder.uriText) }
+    var outputFolderName by rememberSaveable { mutableStateOf(rememberedFolder.name) }
     var running by rememberSaveable { mutableStateOf(false) }
+    var progress by rememberSaveable { mutableIntStateOf(0) }
+    var progressVisible by rememberSaveable { mutableStateOf(false) }
+    var completedUriText by rememberSaveable { mutableStateOf<String?>(null) }
+    var completedName by rememberSaveable { mutableStateOf<String?>(null) }
+    var completedMime by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun currentSource(): ConversionSource? {
         val uri = sourceUriText?.let(Uri::parse) ?: return null
@@ -80,13 +102,29 @@ internal fun UnifiedConversionControls(
 
     fun startConversion() {
         val source = currentSource() ?: return
-        val output = outputUriText?.let(Uri::parse) ?: return
+        val treeUri = outputTreeUriText?.let(Uri::parse) ?: return
         if (running) return
+
         running = true
+        progress = 0
+        progressVisible = true
+        completedUriText = null
+        completedName = null
+        completedMime = null
 
         Thread({
+            var createdOutput: Uri? = null
             try {
-                val progressCallback = MediaFileConverter.Progress { _, _ -> }
+                val outputName = buildConversionOutputName(source)
+                val outputMime = conversionOutputMimeType(source)
+                val output = createOutputDocument(context, treeUri, outputMime, outputName)
+                createdOutput = output
+
+                val progressCallback = MediaFileConverter.Progress { percent, _ ->
+                    mainHandler.post {
+                        progress = percent.coerceIn(0, 100)
+                    }
+                }
                 when (source.kind) {
                     ConversionKind.PHOTO -> MediaFileConverter.convertPhoto(
                         context,
@@ -114,26 +152,51 @@ internal fun UnifiedConversionControls(
                     )
                 }
                 mainHandler.post {
+                    progress = 100
                     running = false
-                    showMessage("変換しました")
+                    completedUriText = output.toString()
+                    completedName = outputName
+                    completedMime = outputMime
                 }
             } catch (error: Throwable) {
+                createdOutput?.let { output ->
+                    runCatching { DocumentsContract.deleteDocument(context.contentResolver, output) }
+                }
                 mainHandler.post {
                     running = false
+                    progressVisible = false
+                    if (error is SecurityException) {
+                        clearRememberedOutputFolder(context)
+                        outputTreeUriText = null
+                        outputFolderName = null
+                    }
                     showMessage("変換できませんでした: ${error.message ?: error.javaClass.simpleName}")
                 }
             }
         }, "GBModerUnifiedConversion").start()
     }
 
-    val outputLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        val uri = if (result.resultCode == Activity.RESULT_OK) result.data?.data else null
-        if (uri != null) {
-            outputUriText = uri.toString()
-            outputName = queryConversionDisplayName(context, uri)
-                ?: currentSource()?.let(::buildConversionOutputName)
+    val outputFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+
+        val grantFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        try {
+            outputTreeUriText?.let { previous ->
+                if (previous != uri.toString()) {
+                    runCatching {
+                        context.contentResolver.releasePersistableUriPermission(Uri.parse(previous), grantFlags)
+                    }
+                }
+            }
+            context.contentResolver.takePersistableUriPermission(uri, grantFlags)
+            val folderName = queryConversionFolderName(context, uri) ?: uri.lastPathSegment ?: "folder"
+            rememberOutputFolder(context, uri, folderName)
+            outputTreeUriText = uri.toString()
+            outputFolderName = folderName
+        } catch (_: SecurityException) {
+            showMessage("出力先フォルダの権限を保存できませんでした")
         }
     }
 
@@ -149,8 +212,7 @@ internal fun UnifiedConversionControls(
             sourceName = null
             sourceKindName = null
             sourceExtension = ""
-            outputUriText = null
-            outputName = null
+            progressVisible = false
             showMessage("対応していないファイル形式です")
             return@rememberLauncherForActivityResult
         }
@@ -159,8 +221,11 @@ internal fun UnifiedConversionControls(
         sourceName = detected.name
         sourceKindName = detected.kind.name
         sourceExtension = detected.extension
-        outputUriText = null
-        outputName = null
+        progress = 0
+        progressVisible = false
+        completedUriText = null
+        completedName = null
+        completedMime = null
     }
 
     Column(
@@ -192,24 +257,23 @@ internal fun UnifiedConversionControls(
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text(sourceName ?: "対象ファイルを選択", modifier = Modifier.weight(1f))
+            Text(
+                sourceName ?: "対象ファイルを選択",
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
 
         OutlinedButton(
             onClick = {
-                val source = currentSource() ?: return@OutlinedButton
-                val outputIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = conversionOutputMimeType(source)
-                    putExtra(Intent.EXTRA_TITLE, buildConversionOutputName(source))
-                }
-                outputLauncher.launch(outputIntent)
+                outputFolderLauncher.launch(outputTreeUriText?.let(Uri::parse))
             },
-            enabled = !running && currentSource() != null,
+            enabled = !running,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 52.dp)
-                .testTag("conversion-output-select"),
+                .testTag("conversion-output-folder-select"),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_save_24),
@@ -217,12 +281,17 @@ internal fun UnifiedConversionControls(
                 modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text(outputName ?: "出力先を選択", modifier = Modifier.weight(1f))
+            Text(
+                outputFolderName ?: "出力先フォルダを選択",
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
 
         Button(
             onClick = ::startConversion,
-            enabled = !running && currentSource() != null && outputUriText != null,
+            enabled = !running && currentSource() != null && outputTreeUriText != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
@@ -230,6 +299,122 @@ internal fun UnifiedConversionControls(
         ) {
             Text("変換")
         }
+
+        if (progressVisible) {
+            Column(
+                modifier = Modifier.fillMaxWidth().testTag("conversion-progress-block"),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                LinearProgressIndicator(
+                    progress = { progress / 100f },
+                    modifier = Modifier.fillMaxWidth().testTag("conversion-progress"),
+                )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.weight(1f))
+                    Text("$progress%", modifier = Modifier.testTag("conversion-progress-percent"))
+                }
+            }
+        }
+    }
+
+    val doneUri = completedUriText?.let(Uri::parse)
+    val doneName = completedName
+    val doneMime = completedMime
+    if (doneUri != null && doneName != null && doneMime != null) {
+        AlertDialog(
+            onDismissRequest = {
+                completedUriText = null
+                completedName = null
+                completedMime = null
+            },
+            modifier = Modifier.testTag("conversion-complete-dialog"),
+            title = { Text("変換完了") },
+            text = { Text("保存しました: $doneName") },
+            confirmButton = {
+                TextButton(
+                    onClick = { openConvertedFile(context, doneUri, doneMime) },
+                    modifier = Modifier.testTag("conversion-open-file"),
+                ) {
+                    Text("ファイルを開く")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        completedUriText = null
+                        completedName = null
+                        completedMime = null
+                    },
+                ) {
+                    Text("閉じる")
+                }
+            },
+        )
+    }
+}
+
+private fun loadRememberedOutputFolder(context: Context): RememberedOutputFolder {
+    val prefs = context.getSharedPreferences(CONVERSION_PREFS, Context.MODE_PRIVATE)
+    val uriText = prefs.getString(PREF_OUTPUT_TREE_URI, null) ?: return RememberedOutputFolder(null, null)
+    val uri = runCatching { Uri.parse(uriText) }.getOrNull() ?: return RememberedOutputFolder(null, null)
+    val hasWritePermission = context.contentResolver.persistedUriPermissions.any { permission ->
+        permission.uri == uri && permission.isWritePermission
+    }
+    if (!hasWritePermission) {
+        clearRememberedOutputFolder(context)
+        return RememberedOutputFolder(null, null)
+    }
+    val name = prefs.getString(PREF_OUTPUT_TREE_NAME, null)
+        ?: queryConversionFolderName(context, uri)
+        ?: uri.lastPathSegment
+    return RememberedOutputFolder(uriText, name)
+}
+
+private fun rememberOutputFolder(context: Context, uri: Uri, name: String) {
+    context.getSharedPreferences(CONVERSION_PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putString(PREF_OUTPUT_TREE_URI, uri.toString())
+        .putString(PREF_OUTPUT_TREE_NAME, name)
+        .apply()
+}
+
+private fun clearRememberedOutputFolder(context: Context) {
+    context.getSharedPreferences(CONVERSION_PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .remove(PREF_OUTPUT_TREE_URI)
+        .remove(PREF_OUTPUT_TREE_NAME)
+        .apply()
+}
+
+private fun createOutputDocument(
+    context: Context,
+    treeUri: Uri,
+    mimeType: String,
+    displayName: String,
+): Uri {
+    val treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
+    val parentDocument = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocumentId)
+    return DocumentsContract.createDocument(
+        context.contentResolver,
+        parentDocument,
+        mimeType,
+        displayName,
+    ) ?: throw IllegalStateException("output document could not be created")
+}
+
+private fun openConvertedFile(context: Context, uri: Uri, mimeType: String) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, mimeType)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            GbModerLocalization.localize(context, "このファイルを開けるアプリがありません"),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
 }
 
@@ -280,6 +465,16 @@ private fun conversionOutputMimeType(source: ConversionSource): String = when (s
         "glb" -> "model/gltf-binary"
         "obj" -> "text/plain"
         else -> "application/octet-stream"
+    }
+}
+
+private fun queryConversionFolderName(context: Context, treeUri: Uri): String? {
+    return try {
+        val treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
+        val documentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocumentId)
+        queryConversionDisplayName(context, documentUri)
+    } catch (_: Throwable) {
+        null
     }
 }
 

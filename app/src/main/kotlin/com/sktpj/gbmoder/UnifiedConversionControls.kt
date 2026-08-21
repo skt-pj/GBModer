@@ -238,11 +238,18 @@ private fun detectConversionSource(context: Context, uri: Uri, name: String): Co
         .getOrNull()
         .orEmpty()
         .lowercase(Locale.ROOT)
-    val extension = conversionExtensionOf(name)
+    val fileExtension = conversionExtensionOf(name)
+    val extension = when {
+        fileExtension.isNotBlank() -> fileExtension
+        mime == "model/gltf+json" -> "gltf"
+        mime == "model/gltf-binary" -> "glb"
+        else -> ""
+    }
 
     val kind = when {
         mime.startsWith("image/") -> ConversionKind.PHOTO
         mime.startsWith("video/") -> ConversionKind.VIDEO
+        mime == "model/gltf+json" || mime == "model/gltf-binary" -> ConversionKind.MODEL
         extension in setOf("ply", "obj", "gltf", "glb") -> ConversionKind.MODEL
         extension in setOf("png", "jpg", "jpeg", "webp", "heic", "heif", "bmp") -> ConversionKind.PHOTO
         extension in setOf("mp4", "m4v", "3gp", "webm", "mkv", "mov") -> ConversionKind.VIDEO

@@ -18,18 +18,18 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.40", "version name")
-require("version.properties", "VERSION_CODE=41", "version code")
+require("version.properties", "VERSION_NAME=0.1.41", "version name")
+require("version.properties", "VERSION_CODE=42", "version code")
 require("app/src/main/AndroidManifest.xml", '.AppMenuActivity', "menu activity registered")
 
 menu = "app/src/main/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
 require(menu, 'testTag("app-menu-screen")', "menu screen")
-require(menu, 'tag = "menu-diagnostics"', "diagnostics menu item")
+require(menu, 'tag = "menu-diagnostics"', "diagnostics implementation retained")
 require(menu, 'tag = "menu-libraries"', "libraries menu item")
 require(menu, 'tag = "menu-privacy"', "privacy menu item")
 require(menu, ".testTag(tag)", "menu item tag binding")
-require(menu, "VideoDiagnosticsActivity::class.java", "diagnostics route")
-require(menu, "LiveModeSubscriptionCard()", "subscription status in menu")
+require(menu, "VideoDiagnosticsActivity::class.java", "diagnostics route retained")
+require(menu, "LiveModeSubscriptionCard()", "subscription implementation retained")
 require(menu, "BuildConfig.VERSION_NAME", "app version display")
 require(menu, '"Google Play Billing Library", "9.1.0"', "billing library disclosure")
 require(menu, '"Jetpack Compose UI / Foundation / Material 3", "BOM 2026.08.00"', "Compose library disclosure")
@@ -67,4 +67,4 @@ accessibility = "app/src/main/res/xml/accessibility_service_config.xml"
 require(accessibility, 'android:canRetrieveWindowContent="true"', "declared accessibility data access")
 reject(accessibility, 'android:isAccessibilityTool="true"', "app does not self-designate as accessibility tool")
 
-print("MENU + PRIVACY + ACCESSIBILITY DISCLOSURE v0.1.40 AUTOMATED GATE: PASS")
+print("MENU + PRIVACY + ACCESSIBILITY DISCLOSURE v0.1.41 AUTOMATED GATE: PASS")

@@ -146,8 +146,8 @@ jobs:
         with:
           name: GBModer-v${{ env.VERSION_NAME }}-debug
           path: |
-            app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk
-            app/build/outputs/apk/debug/GBModer-v${VERSION_NAME}-debug.apk.sha256
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug.apk.sha256
             app/build/outputs/apk/debug/signing-certificate.txt
             app/build/outputs/apk/debug/build-metadata.txt
           if-no-files-found: error

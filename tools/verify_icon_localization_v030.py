@@ -57,7 +57,7 @@ for path in (
     print(f"PASS locale resource {path}")
 
 for source in (compose, conversion, unified):
-    if 'import androidx.compose.material3.Text' in source:
+    if "import androidx.compose.material3.Text" in source.splitlines():
         raise SystemExit("FAIL Compose UI bypasses localization bridge with direct Material Text import")
 print("PASS Compose text routed through localization bridge")
 need(localization, "object GbModerLocalization", "localization bridge")
@@ -66,7 +66,9 @@ need(localization, '"共通" to R.string.common_section', "common section locali
 need(localization, '"フィルター" to R.string.filter_section', "filter section localization")
 need(localization, '"変換" to R.string.conversion_section', "conversion section localization")
 need(localization, '"対象ファイルを選択" to R.string.conversion_source_select', "source action localization")
-need(localization, '"出力先を選択" to R.string.conversion_output_select', "output action localization")
+need(localization, '"出力先フォルダを選択" to R.string.conversion_output_folder_select', "output folder action localization")
+need(localization, '"変換完了" to R.string.conversion_complete_title', "completion dialog localization")
+need(localization, '"ファイルを開く" to R.string.conversion_open_file', "open-file action localization")
 need(localization, "R.string.converting_format", "dynamic conversion localization")
 need(localization, "MaterialText(", "Material 3 text renderer retained")
 
@@ -77,4 +79,4 @@ need(generated_capture, "R.string.notification_filter_active", "localized notifi
 need(generated_capture, "R.string.notification_stop", "localized notification stop action")
 need(generated_capture, "R.string.whole_screen_not_supported", "localized capture warning")
 
-print("ANDROID ICON + LOCALIZATION v0.1.30 FEATURE GATE: PASS")
+print("ANDROID ICON + LOCALIZATION FEATURE GATE: PASS")

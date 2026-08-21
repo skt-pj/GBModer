@@ -31,10 +31,11 @@ commands = [
     [sys.executable, str(repo / "tools/finish_billing_gate_v035.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_portrait_video_v038.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_portrait_orientation_v039.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_resolution_default_v040.py"), str(generated_root)],
 ]
 
 for command in commands:
     print("+", " ".join(command), flush=True)
     subprocess.run(command, cwd=repo, check=True)
 
-print("all generated sources prepared through v0.1.39", flush=True)
+print("all generated sources prepared through v0.1.40", flush=True)

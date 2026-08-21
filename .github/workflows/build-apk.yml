@@ -54,7 +54,7 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test UI, billing, menu, privacy, conversion, portrait/GPU video, diagnostics, and build signed release APK/AAB
+      - name: Test release UI, conversion, billing implementation, portrait/GPU video, and build signed release APK/AAB
         run: |
           set +e
           gradle --no-daemon :app:testDebugUnitTest :app:assembleRelease :app:bundleRelease 2>&1 | tee build.log
@@ -105,6 +105,10 @@ jobs:
           fi
           if [ "$status" = "0" ]; then
             python3 tools/verify_resolution_default_v040.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_release_debug_v041.py
             status=$?
           fi
           if [ "$status" = "0" ]; then
@@ -161,6 +165,7 @@ jobs:
           ciRunId=${GITHUB_RUN_ID}
           ciJob=${GITHUB_JOB}
           buildAndTests=PASS
+          debugFeatures=false
           apkFile=GBModer-v${VERSION_NAME}-release.apk
           apkBytes=${apk_bytes}
           apkSha256=${apk_sha}
@@ -170,7 +175,7 @@ jobs:
           signerCertificateSha256=E6:48:32:00:71:B8:AB:0D:E0:38:F7:67:90:06:4B:99:46:1B:67:D7:DB:E7:CE:75:06:D1:2A:5F:4F:A8:84:D8
           EOF
 
-      - name: Upload versioned release APK and Play AAB artifact
+      - name: Upload formal release APK and Play AAB
         if: env.BUILD_STATUS == '0'
         uses: actions/upload-artifact@v4
         with:
@@ -182,6 +187,30 @@ jobs:
             app/build/outputs/apk/release/build-metadata.txt
             app/build/outputs/bundle/release/GBModer-v${{ env.VERSION_NAME }}-release.aab
             app/build/outputs/bundle/release/GBModer-v${{ env.VERSION_NAME }}-release.aab.sha256
+          if-no-files-found: error
+
+      - name: Build internal APK with live and diagnostics enabled
+        if: env.BUILD_STATUS == '0'
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -PGBMODER_DEBUG_FEATURES=true :app:assembleDebug
+          debug_dir="app/build/outputs/apk/debug"
+          source_apk="$debug_dir/app-debug.apk"
+          internal_apk="$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk"
+          cp "$source_apk" "$internal_apk"
+          sha256sum "$internal_apk" > "$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$internal_apk" \
+            > "$debug_dir/debug-signing-certificate.txt"
+
+      - name: Upload internal debug-feature APK
+        if: env.BUILD_STATUS == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBModer-v${{ env.VERSION_NAME }}-debug-features
+          path: |
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk.sha256
+            app/build/outputs/apk/debug/debug-signing-certificate.txt
           if-no-files-found: error
 
       - name: Publish APK/AAB or failure evidence into repository

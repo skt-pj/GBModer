@@ -29,6 +29,7 @@
 
         <activity
             android:name=".LiveModePaywallActivity"
+            android:enabled="${debugFeaturesEnabled}"
             android:exported="false" />
 
         <activity
@@ -37,10 +38,12 @@
 
         <activity
             android:name=".VideoDiagnosticsActivity"
+            android:enabled="${debugFeaturesEnabled}"
             android:exported="false" />
 
         <service
             android:name=".FilterAccessibilityService"
+            android:enabled="${debugFeaturesEnabled}"
             android:exported="true"
             android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
@@ -54,11 +57,13 @@
 
         <service
             android:name=".FilterCaptureService"
+            android:enabled="${debugFeaturesEnabled}"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
         <receiver
             android:name=".FilterControlReceiver"
+            android:enabled="${debugFeaturesEnabled}"
             android:exported="false" />
     </application>
 

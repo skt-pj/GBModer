@@ -29,15 +29,19 @@ if min(settings, quiet, first_setup, common, mode) < 0 or not (quiet < first_set
 print("PASS quiet zone precedes unchanged common settings")
 
 need(unified, "FilledTonalButton", "Material 3 source action")
-need(unified, "OutlinedButton", "Material 3 output action")
+need(unified, "OutlinedButton", "Material 3 output folder action")
 need(unified, "Button(", "Material 3 conversion primary action")
 need(unified, "ButtonDefaults.IconSize", "Material 3 icon sizing")
 need(unified, "ButtonDefaults.IconSpacing", "Material 3 icon spacing")
 need(unified, '.heightIn(min = 52.dp)', "large source/output touch targets")
 need(unified, '.heightIn(min = 56.dp)', "large conversion touch target")
 need(unified, 'testTag("conversion-source-select")', "source selection action")
-need(unified, 'testTag("conversion-output-select")', "output destination action")
+need(unified, 'testTag("conversion-output-folder-select")', "output folder action")
 need(unified, 'testTag("conversion-run")', "explicit conversion action")
+need(unified, 'testTag("conversion-progress")', "processing progress bar")
+need(unified, 'testTag("conversion-progress-percent")', "processing numeric percentage")
+need(unified, 'testTag("conversion-complete-dialog")', "completion popup")
+need(unified, 'testTag("conversion-open-file")', "open output action")
 
 need(media, "Scaffold(", "compatibility conversion Material 3 scaffold")
 need(media, "WindowInsets.safeDrawing", "conversion safe drawing insets")
@@ -46,9 +50,9 @@ if "TopAppBar(" in media:
     raise SystemExit("FAIL conversion screen must not add top app-bar text")
 print("PASS conversion top app bar absent")
 
-for obsolete in ("OutlinedCard", "TextButton(", 'testTag("choose-output-and-convert")'):
+for obsolete in ("OutlinedCard", 'testTag("choose-output-and-convert")'):
     if obsolete in media:
         raise SystemExit(f"FAIL obsolete multi-step conversion chrome remains: {obsolete}")
 print("PASS compatibility conversion screen delegates to the same minimal controls")
 
-print("UIUX v0.1.34 AUTOMATED GATE: PASS")
+print("UIUX REMEMBERED-FOLDER CONVERSION GATE: PASS")

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="privacy_network_body_v041">GBModer는 선택한 미디어나 변환 내용을 개발자가 운영하는 서버로 전송하지 않습니다.</string>
+    <string name="privacy_retention_body_v041">변환된 파일은 사용자가 선택한 위치에만 저장되며 사용자가 삭제할 때까지 유지됩니다. GBModer는 Android 앱 백업을 사용하지 않습니다.</string>
+</resources>

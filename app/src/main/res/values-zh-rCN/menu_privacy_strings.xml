@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="menu_title">菜单</string>
+    <string name="menu_description">查看诊断、订阅状态、所用库、隐私和应用信息。</string>
+    <string name="menu_diagnostics_title">诊断</string>
+    <string name="menu_diagnostics_description">比较视频处理路径、编解码器、GPU支持和帧时间，并可导出日志。</string>
+    <string name="menu_libraries_title">使用的库</string>
+    <string name="menu_libraries_description">查看GBModer使用的主要运行时、构建和测试库。</string>
+    <string name="menu_privacy_title">隐私政策</string>
+    <string name="menu_privacy_description">查看屏幕内容、所选文件、诊断信息和付费信息的处理方式。</string>
+    <string name="menu_about_title">应用信息</string>
+    <string name="menu_version_format">版本 %1$s</string>
+    <string name="menu_package_format">软件包 %1$s</string>
+    <string name="menu_back">返回</string>
+
+    <string name="libraries_page_description">版本来自当前应用构建配置。运行时库与仅用于构建或测试的工具分开显示。</string>
+    <string name="library_scope_runtime">运行时使用</string>
+    <string name="library_scope_build_test">仅构建/测试</string>
+
+    <string name="privacy_policy_intro">skt-pj 的 GBModer 主要在设备本地处理屏幕和媒体内容。本政策说明应用中的数据处理路径。</string>
+    <string name="privacy_section_data_access">数据访问</string>
+    <string name="privacy_data_access_body">GBModer 不创建用户账户，也不集成广告或分析 SDK。应用只访问用户明确启动的功能所需的数据。</string>
+    <string name="privacy_section_accessibility">无障碍服务</string>
+    <string name="privacy_accessibility_body">用户启用后，无障碍服务可能读取屏幕文字和窗口内容，用于低分辨率文字重绘和兼容截图路径。内容仅在设备本地处理，不会发送到开发者运营的服务器。</string>
+    <string name="privacy_section_screen_capture">屏幕捕获</string>
+    <string name="privacy_screen_capture_body">实时滤镜仅在用户批准共享屏幕或应用后使用 Android MediaProjection。捕获的帧仅在设备本地用于滤镜处理，不会上传到开发者服务器。</string>
+    <string name="privacy_section_files">所选媒体文件</string>
+    <string name="privacy_files_body">照片、视频和受支持的3D文件仅在用户通过Android文档选择器选择后读取。转换在设备本地完成，输出只写入用户指定的位置。</string>
+    <string name="privacy_section_billing">Google Play 付费</string>
+    <string name="privacy_billing_body">实时模式订阅由 Google Play 处理。GBModer 从 Google Play 获取商品详情以及购买/订阅状态，用于判断实时模式是否可用。应用不会接收或保存银行卡号等支付凭据。</string>
+    <string name="privacy_section_diagnostics">诊断和日志</string>
+    <string name="privacy_diagnostics_body">性能和诊断信息在设备本地生成。只有用户通过Android文档选择器明确导出时，报告或日志才会保存到应用外。如果用户选择云端文档提供商，则由该提供商处理目标位置。</string>
+    <string name="privacy_section_network">外部传输</string>
+    <string name="privacy_network_body">GBModer 不运营自己的广告、分析或内容上传后端。订阅购买和状态确认所需的通信由 Google Play Billing 与 Google Play 完成。</string>
+    <string name="privacy_section_retention">存储与保留</string>
+    <string name="privacy_retention_body">GBModer 不在开发者服务器保存用户屏幕或媒体内容。本地生成的输出文件和导出日志会保留在用户选择的位置，直到用户删除。GBModer 已禁用 Android 应用备份。</string>
+    <string name="privacy_section_contact">联系</string>
+    <string name="privacy_contact_body">开发者：skt-pj / GBModer。隐私问题或报告可通过公开的 GBModer GitHub Issues 提交。</string>
+    <string name="privacy_last_updated">最后更新：2026-08-21</string>
+
+    <string name="accessibility_disclosure_title">无障碍服务访问</string>
+    <string name="accessibility_disclosure_body">GBModer 为“让文字更易读”功能和兼容截图路径使用 Android 无障碍服务读取屏幕文字和窗口内容。读取的内容仅在本设备上用于这些功能，不会发送到开发者运营的服务器。即使不授予此权限，也可以使用照片、视频和3D转换。</string>
+    <string name="accessibility_disclosure_accept">同意并打开设置</string>
+    <string name="accessibility_disclosure_decline">不同意</string>
+</resources>

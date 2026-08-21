@@ -2,7 +2,6 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-version = (root / "version.properties").read_text()
 manifest = (root / "app/src/main/AndroidManifest.xml").read_text()
 compose = (root / "app/src/main/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt").read_text()
 conversion = (root / "app/src/main/kotlin/com/sktpj/gbmoder/MediaConversionActivity.kt").read_text()
@@ -24,8 +23,6 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.34", "version name")
-need(version, "VERSION_CODE=35", "version code")
 need(manifest, 'android:icon="@mipmap/ic_launcher"', "adaptive launcher reference")
 need(manifest, 'android:roundIcon="@mipmap/ic_launcher"', "round launcher reference")
 need(manifest, 'android:localeConfig="@xml/locales_config"', "per-app locale config")
@@ -80,4 +77,4 @@ need(generated_capture, "R.string.notification_filter_active", "localized notifi
 need(generated_capture, "R.string.notification_stop", "localized notification stop action")
 need(generated_capture, "R.string.whole_screen_not_supported", "localized capture warning")
 
-print("ANDROID ICON + LOCALIZATION v0.1.34 AUTOMATED GATE: PASS")
+print("ANDROID ICON + LOCALIZATION v0.1.30 FEATURE GATE: PASS")

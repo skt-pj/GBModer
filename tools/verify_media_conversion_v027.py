@@ -37,8 +37,8 @@ if min(common, filter_section, primary, conversion_section, unified_controls, di
     raise SystemExit("FAIL main hierarchy must be common -> filter -> conversion -> diagnostics")
 print("PASS common/filter/conversion hierarchy")
 
-# Exactly one source picker, one destination picker and one conversion action; no media-kind buttons.
-for tag in ("conversion-source-select", "conversion-output-select", "conversion-run"):
+# Exactly one source picker, one remembered output folder picker and one conversion action.
+for tag in ("conversion-source-select", "conversion-output-folder-select", "conversion-run"):
     need(unified, f'testTag("{tag}")', f"unified action {tag}")
 for obsolete in (
     'testTag("convert-photo")',
@@ -53,7 +53,10 @@ for obsolete in (
 print("PASS photo/video/model UI split removed")
 
 need(unified, "ActivityResultContracts.OpenDocument", "single source document picker")
-need(unified, "Intent.ACTION_CREATE_DOCUMENT", "independent output destination picker")
+need(unified, "ActivityResultContracts.OpenDocumentTree", "output folder picker")
+need(unified, "takePersistableUriPermission", "persistent output folder permission")
+need(unified, "getSharedPreferences(CONVERSION_PREFS", "remembered output folder state")
+need(unified, "DocumentsContract.createDocument", "output file created inside remembered folder")
 need(unified, "detectConversionSource", "file kind is detected after selection")
 need(unified, 'mime.startsWith("image/")', "image auto detection")
 need(unified, 'mime.startsWith("video/")', "video auto detection")
@@ -61,6 +64,14 @@ need(unified, 'setOf("ply", "obj", "gltf", "glb")', "3D extension auto detection
 need(unified, "MediaFileConverter.convertPhoto", "photo conversion dispatch")
 need(unified, "MediaFileConverter.convertVideo", "video conversion dispatch")
 need(unified, "MediaFileConverter.convertModel", "model conversion dispatch")
+need(unified, "LinearProgressIndicator", "conversion progress bar")
+need(unified, 'testTag("conversion-progress-percent")', "conversion numeric progress")
+need(unified, "AlertDialog(", "completion popup")
+need(unified, "Intent.ACTION_VIEW", "open completed file")
+
+if "Intent.ACTION_CREATE_DOCUMENT" in unified:
+    raise SystemExit("FAIL output must be a remembered folder, not a per-file save picker")
+print("PASS per-file output picker removed")
 
 # Compatibility activity reuses exactly the same controls instead of keeping a second kind-specific UI.
 need(activity, "UnifiedConversionControls(", "compatibility screen shares unified controls")
@@ -76,4 +87,4 @@ need(converter, '"obj".equals(ext)', "obj model support")
 need(converter, '"gltf".equals(ext)', "gltf model support")
 need(converter, '"glb".equals(ext)', "glb model support")
 
-print("MEDIA CONVERSION v0.1.34 FEATURE GATE: PASS")
+print("MEDIA CONVERSION REMEMBERED-FOLDER FEATURE GATE: PASS")

@@ -18,8 +18,8 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.33", "version name")
-need(version, "VERSION_CODE=34", "version code")
+need(version, "VERSION_NAME=0.1.34", "version name")
+need(version, "VERSION_CODE=35", "version code")
 need(manifest, 'android:name=".VideoDiagnosticsActivity"', "diagnostics activity registered")
 need(activity, 'testTag("video-diagnostics-screen")', "diagnostics screen")
 need(activity, 'testTag("diagnostics-top-quiet-zone")', "Pixel-safe diagnostics top quiet zone")
@@ -71,4 +71,4 @@ for path in (
     text = (root / path).read_text()
     need(text, 'name="diag_encode_ms"', f"encoder timing localized: {path}")
 
-print("VIDEO PIPELINE DIAGNOSTICS v0.1.33 AUTOMATED GATE: PASS")
+print("VIDEO PIPELINE DIAGNOSTICS v0.1.34 AUTOMATED GATE: PASS")

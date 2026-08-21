@@ -54,7 +54,7 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test UI, billing, menu, privacy, conversion, GPU video, diagnostics, and build signed release APK/AAB
+      - name: Test UI, billing, menu, privacy, conversion, portrait/GPU video, diagnostics, and build signed release APK/AAB
         run: |
           set +e
           gradle --no-daemon :app:testDebugUnitTest :app:assembleRelease :app:bundleRelease 2>&1 | tee build.log
@@ -93,6 +93,10 @@ jobs:
           fi
           if [ "$status" = "0" ]; then
             python3 tools/verify_aspect_crop_v033.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_portrait_video_v038.py
             status=$?
           fi
           if [ "$status" = "0" ]; then

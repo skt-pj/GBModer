@@ -18,7 +18,7 @@ need(compose, 'SectionTitle("フィルター")', "filter section")
 need(compose, 'SectionTitle("変換")', "conversion section")
 need(compose, "UnifiedConversionControls(", "conversion controls on main screen")
 
-for tag in ("conversion-source-select", "conversion-output-select", "conversion-run"):
+for tag in ("conversion-source-select", "conversion-output-folder-select", "conversion-run"):
     need(unified, f'testTag("{tag}")', tag)
 
 for removed in ("convert-photo", "convert-video", "convert-model"):
@@ -29,17 +29,29 @@ print("PASS media-specific action split removed")
 need(unified, "detectConversionSource", "automatic file detection")
 need(unified, "contentResolver.getType(uri)", "MIME detection")
 need(unified, 'setOf("ply", "obj", "gltf", "glb")', "model extension detection")
-need(unified, "Intent.ACTION_CREATE_DOCUMENT", "output picker")
+need(unified, "ActivityResultContracts.OpenDocumentTree", "folder picker")
+need(unified, "takePersistableUriPermission", "persistent tree permission")
+need(unified, "persistedUriPermissions", "restored tree permission validation")
+need(unified, "getSharedPreferences(CONVERSION_PREFS", "remembered folder preference")
+need(unified, "DocumentsContract.createDocument", "file creation within selected folder")
 need(unified, "MediaFileConverter.convertPhoto", "photo internal dispatch")
 need(unified, "MediaFileConverter.convertVideo", "video internal dispatch")
 need(unified, "MediaFileConverter.convertModel", "model internal dispatch")
+need(unified, "LinearProgressIndicator", "progress indicator")
+need(unified, 'Text("$progress%"', "numeric progress")
+need(unified, "AlertDialog(", "completion popup")
+need(unified, "Intent.ACTION_VIEW", "open converted file")
 need(activity, "UnifiedConversionControls(", "compatibility activity uses shared controls")
 
+if "Intent.ACTION_CREATE_DOCUMENT" in unified:
+    raise SystemExit("FAIL output destination still selects a file instead of a folder")
+print("PASS output destination is a remembered folder")
+
 source_pos = unified.find('testTag("conversion-source-select")')
-output_pos = unified.find('testTag("conversion-output-select")')
+output_pos = unified.find('testTag("conversion-output-folder-select")')
 run_pos = unified.find('testTag("conversion-run")')
 if not (source_pos < output_pos < run_pos):
     raise SystemExit("FAIL action order")
-print("PASS source -> output -> convert order")
+print("PASS source -> output folder -> convert order")
 
-print("UNIFIED CONVERSION UI v0.1.34 FEATURE GATE: PASS")
+print("UNIFIED CONVERSION REMEMBERED-FOLDER FEATURE GATE: PASS")

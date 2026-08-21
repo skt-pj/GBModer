@@ -39,8 +39,8 @@ need(converter, '"gltf".equals(ext)', "gltf model support")
 need(converter, '"glb".equals(ext)', "glb model support")
 
 primary = compose.find('testTag("primary-action")')
-media = compose.find('testTag("media-conversion-card")')
-diagnostics = compose.find('DiagnosticsCard(')
+media = compose.find("        MediaConversionCard(")
+diagnostics = compose.find("        DiagnosticsCard(")
 if primary < 0 or media < 0 or diagnostics < 0 or not (primary < media < diagnostics):
     raise SystemExit("FAIL file conversion must follow the primary filter action and precede diagnostics")
 print("PASS conversion placement")

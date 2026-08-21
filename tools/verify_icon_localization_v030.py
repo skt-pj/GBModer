@@ -23,8 +23,8 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.32", "version name")
-need(version, "VERSION_CODE=33", "version code")
+need(version, "VERSION_NAME=0.1.33", "version name")
+need(version, "VERSION_CODE=34", "version code")
 need(manifest, 'android:icon="@mipmap/ic_launcher"', "adaptive launcher reference")
 need(manifest, 'android:roundIcon="@mipmap/ic_launcher"', "round launcher reference")
 need(manifest, 'android:localeConfig="@xml/locales_config"', "per-app locale config")
@@ -69,4 +69,4 @@ need(generated_capture, "R.string.notification_filter_active", "localized notifi
 need(generated_capture, "R.string.notification_stop", "localized notification stop action")
 need(generated_capture, "R.string.whole_screen_not_supported", "localized capture warning")
 
-print("ANDROID ICON + LOCALIZATION v0.1.32 AUTOMATED GATE: PASS")
+print("ANDROID ICON + LOCALIZATION v0.1.33 AUTOMATED GATE: PASS")

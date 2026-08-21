@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_mode_title">实时模式</string>
+    <string name="live_mode_status_active">订阅有效</string>
+    <string name="live_mode_status_pending">购买处理中</string>
+    <string name="live_mode_status_loading">正在确认订阅状态</string>
+    <string name="live_mode_status_free">免费方案</string>
+    <string name="live_mode_manage">管理订阅</string>
+    <string name="live_mode_active_description">订阅有效，可以使用实时滤镜。</string>
+    <string name="live_mode_paid_description">实时滤镜需要月度订阅（%1$s）。文件转换和其他功能仍可免费使用。</string>
+    <string name="live_mode_price_from_play">Google Play 显示价格</string>
+    <string name="live_mode_paywall_headline">解锁实时模式</string>
+    <string name="live_mode_paywall_body">将 GBModer 用作实时屏幕滤镜。文件转换等非实时功能仍可免费使用。</string>
+    <string name="live_mode_benefit_realtime">实时屏幕滤镜</string>
+    <string name="live_mode_other_free">照片、视频、3D 模型转换、设置和诊断功能均免费。</string>
+    <string name="live_mode_monthly_price">每月 %1$s</string>
+    <string name="live_mode_price_loading">正在从 Google Play 获取价格</string>
+    <string name="live_mode_auto_renew">每月自动续订，直至取消。</string>
+    <string name="live_mode_cancel_info">可随时在 Google Play 订阅中取消。取消后可使用至当前付费周期结束。</string>
+    <string name="live_mode_pending_purchase">购买正在处理中。Google Play 确认付款后即可使用实时模式。</string>
+    <string name="live_mode_subscribe">开始月度方案</string>
+    <string name="live_mode_loading_purchase">正在加载 Google Play</string>
+    <string name="live_mode_not_now">暂不</string>
+    <string name="live_mode_purchase_unavailable">暂时无法使用 Google Play 结算。请确认 Play 商店连接及订阅商品设置。</string>
+</resources>

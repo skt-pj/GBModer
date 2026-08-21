@@ -10,15 +10,11 @@ repo = Path(__file__).resolve().parents[1]
 source_root = Path(sys.argv[1]).resolve()
 generated_root = Path(sys.argv[2]).resolve()
 
-subprocess.run(
+for command in (
     [sys.executable, str(repo / "tools/prepare_billing_kotlin_v035.py"), str(source_root), str(generated_root)],
-    cwd=repo,
-    check=True,
-)
-subprocess.run(
     [sys.executable, str(repo / "tools/finish_release_ui_v041.py"), str(generated_root)],
-    cwd=repo,
-    check=True,
-)
+    [sys.executable, str(repo / "tools/finish_release_polish_v041.py"), str(generated_root)],
+):
+    subprocess.run(command, cwd=repo, check=True)
 
 print("billing/release Kotlin sources prepared through v0.1.41", flush=True)

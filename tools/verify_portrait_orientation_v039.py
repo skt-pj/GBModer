@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.39", "version name")
-require("version.properties", "VERSION_CODE=40", "version code")
+require("version.properties", "VERSION_NAME=0.1.40", "version name")
+require("version.properties", "VERSION_CODE=41", "version code")
 require("tools/prepare_all_sources_v020.py", "finish_portrait_orientation_v039.py", "orientation finalizer registered")
 require("app/build.gradle", "finish_portrait_orientation_v039.py", "orientation finalizer tracked by Gradle")
 
@@ -35,8 +35,6 @@ require(generated, "VideoGpuConverter.mapDisplayUvForRotation(\n                
 require(generated, "sourceFormat.setInteger(MediaFormat.KEY_ROTATION, 0)", "decoder rotation still neutralized")
 require(generated, "rotation_mapping=clockwise_upright", "orientation diagnostic")
 
-# The old v0.1.38 full-frame 90-degree mapping was the 270-degree path and produced
-# an upside-down portrait after decoder rotation was neutralized. Do not restore it.
 finalizer = "tools/finish_portrait_orientation_v039.py"
 require(finalizer, "mapped[i] = 1.0f - v;", "90 mapping fixed in finalizer")
 require(finalizer, "mapped[i + 1] = u;", "90 mapping direction fixed in finalizer")
@@ -51,4 +49,4 @@ require(unit, "zeroAndOneEightyRemainStable", "0/180 regression unit test")
 require(unit, "new float[]{1f, 0f, 1f, 1f, 0f, 0f, 0f, 1f}", "expected clockwise 90 corner order")
 require(unit, "new float[]{0f, 1f, 0f, 0f, 1f, 1f, 1f, 0f}", "expected clockwise 270 corner order")
 
-print("PORTRAIT VIDEO UPRIGHT ORIENTATION v0.1.39 AUTOMATED GATE: PASS")
+print("PORTRAIT VIDEO UPRIGHT ORIENTATION v0.1.40 AUTOMATED GATE: PASS")

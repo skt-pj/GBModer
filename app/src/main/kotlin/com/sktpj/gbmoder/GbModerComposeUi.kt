@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -31,7 +32,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -42,7 +45,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -55,16 +57,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.currentWindowDpSize
 import kotlin.math.roundToInt
 
 interface GbModerUiActions {
@@ -130,7 +133,7 @@ object GbModerComposeUi {
 }
 
 @Composable
-private fun GbModerTheme(activity: Activity, content: @Composable () -> Unit) {
+internal fun GbModerTheme(activity: Activity, content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val colorScheme = when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dark -> dynamicDarkColorScheme(activity)
@@ -141,21 +144,15 @@ private fun GbModerTheme(activity: Activity, content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = colorScheme, content = content)
 }
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 private fun GbModerScreen(state: GbModerUiState, actions: GbModerUiActions) {
-    val windowSize = currentWindowDpSize()
-    val expanded = windowSize.width >= 840.dp
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val expanded = with(density) { windowInfo.containerSize.width.toDp() } >= 840.dp
 
     Scaffold(
         modifier = Modifier.fillMaxSize().testTag("gbmoder-scaffold"),
         contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = {
-            TopAppBar(
-                title = { Text("GBModer", fontWeight = FontWeight.SemiBold) },
-                actions = { StatusPill(running = state.running) },
-            )
-        },
     ) { innerPadding ->
         if (expanded) {
             Row(
@@ -187,21 +184,6 @@ private fun GbModerScreen(state: GbModerUiState, actions: GbModerUiActions) {
                     .padding(innerPadding),
             )
         }
-    }
-}
-
-@Composable
-private fun StatusPill(running: Boolean) {
-    Surface(
-        modifier = Modifier.padding(end = 12.dp).testTag("status-pill"),
-        shape = RoundedCornerShape(100.dp),
-        tonalElevation = 2.dp,
-    ) {
-        Text(
-            text = if (running) "実行中" else "停止中",
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-        )
     }
 }
 
@@ -241,6 +223,8 @@ private fun SettingsPane(
             .testTag("settings-scroll"),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
+        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))
+
         if (!state.accessibilityReady) {
             FirstSetupCard(actions)
         }
@@ -488,7 +472,7 @@ private fun MediaConversionCard(
     Card(modifier = Modifier.fillMaxWidth().testTag("media-conversion-card")) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("ファイル変換", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
@@ -496,7 +480,11 @@ private fun MediaConversionCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(
+
+            ConversionActionButton(
+                iconRes = R.drawable.ic_photo_24,
+                label = "写真をPNGに変換",
+                tag = "convert-photo",
                 onClick = {
                     launchMediaConversion(
                         context,
@@ -508,11 +496,11 @@ private fun MediaConversionCard(
                         dither,
                     )
                 },
-                modifier = Modifier.fillMaxWidth().testTag("convert-photo"),
-            ) {
-                Text("写真を変換")
-            }
-            OutlinedButton(
+            )
+            ConversionActionButton(
+                iconRes = R.drawable.ic_video_24,
+                label = "動画をMP4に変換",
+                tag = "convert-video",
                 onClick = {
                     launchMediaConversion(
                         context,
@@ -524,11 +512,11 @@ private fun MediaConversionCard(
                         dither,
                     )
                 },
-                modifier = Modifier.fillMaxWidth().testTag("convert-video"),
-            ) {
-                Text("動画を変換")
-            }
-            OutlinedButton(
+            )
+            ConversionActionButton(
+                iconRes = R.drawable.ic_3d_model_24,
+                label = "3Dモデルを変換",
+                tag = "convert-model",
                 onClick = {
                     launchMediaConversion(
                         context,
@@ -540,16 +528,38 @@ private fun MediaConversionCard(
                         dither,
                     )
                 },
-                modifier = Modifier.fillMaxWidth().testTag("convert-model"),
-            ) {
-                Text("3Dモデルを変換")
-            }
+            )
+
             Text(
-                "3Dモデル: PLY / OBJの頂点色、glTFのマテリアル色・埋込テクスチャ、GLBのマテリアル色に対応します。",
+                "3Dモデル対応: PLY / OBJ / glTF / GLB",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun ConversionActionButton(
+    iconRes: Int,
+    label: String,
+    tag: String,
+    onClick: () -> Unit,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .testTag(tag),
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize),
+        )
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(label, modifier = Modifier.weight(1f))
     }
 }
 

@@ -54,7 +54,7 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test UI, text synchronization, media conversion, icon/localization, renderers, and build signed debug APK
+      - name: Test UI, text synchronization, media conversion, video diagnostics, renderers, and build signed debug APK
         run: |
           set +e
           gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
@@ -81,6 +81,10 @@ jobs:
           fi
           if [ "$status" = "0" ]; then
             python3 tools/verify_icon_localization_v030.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_video_pipeline_v031.py
             status=$?
           fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"

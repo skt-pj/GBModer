@@ -15,8 +15,8 @@ def need(text: str, value: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.28", "version name")
-need(version, "VERSION_CODE=29", "version code")
+need(version, "VERSION_NAME=0.1.29", "version name")
+need(version, "VERSION_CODE=30", "version code")
 need(manifest, 'android:name=".MediaConversionActivity"', "conversion activity registered")
 need(compose, 'testTag("media-conversion-card")', "conversion card")
 need(compose, 'tag = "convert-photo"', "photo action")
@@ -30,6 +30,7 @@ need(compose, "painterResource(iconRes)", "shared icon renderer")
 need(compose, "MediaConversionActivity.KIND_PHOTO", "photo route")
 need(compose, "MediaConversionActivity.KIND_VIDEO", "video route")
 need(compose, "MediaConversionActivity.KIND_MODEL", "model route")
+need(compose, "resolutionValueForPosition(resolutionPosition)", "media route shares current resolution mapping")
 need(activity, "ComponentActivity", "conversion Compose host")
 need(activity, "enableEdgeToEdge()", "edge-to-edge setup")
 need(activity, "rememberLauncherForActivityResult", "Activity Result API")
@@ -62,4 +63,4 @@ if primary < 0 or media < 0 or diagnostics < 0 or not (primary < media < diagnos
     raise SystemExit("FAIL file conversion must follow the primary filter action and precede diagnostics")
 print("PASS conversion placement")
 
-print("MEDIA CONVERSION v0.1.28 AUTOMATED GATE: PASS")
+print("MEDIA CONVERSION v0.1.29 AUTOMATED GATE: PASS")

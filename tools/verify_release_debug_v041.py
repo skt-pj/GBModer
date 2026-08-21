@@ -30,7 +30,8 @@ require(build, "prepare_billing_release_v041.py", "v041 Kotlin wrapper tracked")
 require(build, "finish_release_ui_v041.py", "v041 release UI finalizer tracked")
 require(build, "finish_debug_features_v041.py", "v041 Java gate tracked")
 
-manifest = "app/src/main/AndroidManifest.xml"
+main_manifest = "app/src/main/AndroidManifest.xml"
+debug_manifest = "app/src/debug/AndroidManifest.xml"
 for component in (
     ".LiveModePaywallActivity",
     ".VideoDiagnosticsActivity",
@@ -38,8 +39,16 @@ for component in (
     ".FilterCaptureService",
     ".FilterControlReceiver",
 ):
-    require(manifest, component, f"{component} manifest component retained")
-require(manifest, 'android:enabled="${debugFeaturesEnabled}"', "debug-only components use manifest flag")
+    reject(main_manifest, component, f"formal release excludes {component}")
+    require(debug_manifest, component, f"debug manifest contains {component}")
+for permission in (
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+    "android.permission.POST_NOTIFICATIONS",
+):
+    reject(main_manifest, permission, f"formal release excludes {permission}")
+    require(debug_manifest, permission, f"debug manifest contains {permission}")
+require(debug_manifest, 'android:enabled="${debugFeaturesEnabled}"', "debug components also require explicit flag")
 
 ui = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
 require(ui, "BuildConfig.DEBUG_FEATURES && !state.accessibilityReady", "accessibility setup debug-only")

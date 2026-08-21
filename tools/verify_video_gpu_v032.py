@@ -15,8 +15,8 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.33", "version name")
-need(version, "VERSION_CODE=34", "version code")
+need(version, "VERSION_NAME=0.1.34", "version name")
+need(version, "VERSION_CODE=35", "version code")
 need(prepare, "finish_video_gpu_v032.py", "GPU finalizer registered")
 
 need(source_gpu, "encoder.createInputSurface()", "H264 encoder Surface input")
@@ -45,4 +45,4 @@ if "throw error;" in generated_gpu:
     raise SystemExit("FAIL generated GPU source throws raw Throwable")
 print("PASS generated GPU source is Java-exception-safe")
 
-print("VIDEO GPU CONVERSION v0.1.33 AUTOMATED GATE: PASS")
+print("VIDEO GPU CONVERSION v0.1.34 AUTOMATED GATE: PASS")

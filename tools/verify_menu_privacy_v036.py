@@ -24,9 +24,10 @@ require("app/src/main/AndroidManifest.xml", '.AppMenuActivity', "menu activity r
 
 menu = "app/src/main/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
 require(menu, 'testTag("app-menu-screen")', "menu screen")
-require(menu, 'testTag("menu-diagnostics")', "diagnostics menu item")
-require(menu, 'testTag("menu-libraries")', "libraries menu item")
-require(menu, 'testTag("menu-privacy")', "privacy menu item")
+require(menu, 'tag = "menu-diagnostics"', "diagnostics menu item")
+require(menu, 'tag = "menu-libraries"', "libraries menu item")
+require(menu, 'tag = "menu-privacy"', "privacy menu item")
+require(menu, ".testTag(tag)", "menu item tag binding")
 require(menu, "VideoDiagnosticsActivity::class.java", "diagnostics route")
 require(menu, "LiveModeSubscriptionCard()", "subscription status in menu")
 require(menu, "BuildConfig.VERSION_NAME", "app version display")
@@ -37,6 +38,7 @@ require(menu, '"Material 3 Adaptive", "1.3.0"', "Adaptive library disclosure")
 
 shortcut = "app/src/main/kotlin/com/sktpj/gbmoder/AppMenuShortcut.kt"
 require(shortcut, 'testTag("app-menu")', "main menu shortcut")
+require(shortcut, "Icons.Default.MoreVert", "Material menu icon")
 require(shortcut, "AppMenuActivity::class.java", "main menu route")
 require(shortcut, "MediaConversionActivity.EXTRA_RESOLUTION", "menu receives current settings")
 

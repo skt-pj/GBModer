@@ -66,4 +66,30 @@ if marker not in converter:
 converter = converter.replace(marker, wrapper + marker, 1)
 converter_path.write_text(converter)
 
+gpu_path = root / "VideoGpuConverter.java"
+gpu = gpu_path.read_text()
+old = '''        } catch (Throwable error) {
+            try {
+                encoder.release();
+            } catch (Throwable ignored) {
+            }
+            throw error;
+        }
+'''
+new = '''        } catch (Throwable error) {
+            try {
+                encoder.release();
+            } catch (Throwable ignored) {
+            }
+            if (error instanceof Exception) {
+                throw (Exception) error;
+            }
+            throw new RuntimeException(error);
+        }
+'''
+if gpu.count(old) != 1:
+    raise SystemExit("GPU encoder error bridge marker mismatch")
+gpu = gpu.replace(old, new, 1)
+gpu_path.write_text(gpu)
+
 print("v0.1.32 video conversion defaults to decoder Surface -> OpenGL ES -> encoder Surface")

@@ -21,8 +21,8 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.33", "version name")
-need(version, "VERSION_CODE=34", "version code")
+need(version, "VERSION_NAME=0.1.34", "version name")
+need(version, "VERSION_CODE=35", "version code")
 need(prepare, "finish_aspect_crop_v033.py", "aspect crop finisher registered")
 
 # Shared geometry and unchanged fixed output sizes.
@@ -70,4 +70,4 @@ need(tests, "fixedPresetsCenterCropTallSourcesInsteadOfStretching", "tall source
 need(tests, "phoneAndNativeResolutionKeepWholeSourceAspect", "phone/native no-crop unit test")
 need(tests, "targetFirstDecodeKeepsSourceAspectUntilCrop", "target-first working-size unit test")
 
-print("FIXED PRESET ASPECT PRESERVATION v0.1.33 AUTOMATED GATE: PASS")
+print("FIXED PRESET ASPECT PRESERVATION v0.1.34 AUTOMATED GATE: PASS")

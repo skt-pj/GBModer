@@ -19,7 +19,8 @@ def reject(path: str, needle: str, label: str) -> None:
 require("app/build.gradle", "targetSdk 36", "Play target API")
 require("app/build.gradle", "com.android.billingclient:billing:9.1.0", "Billing Library")
 require("app/build.gradle", "prepareBillingKotlin", "billing Kotlin generation")
-require("app/src/main/AndroidManifest.xml", '.LiveModePaywallActivity', "paywall activity")
+require("app/src/debug/AndroidManifest.xml", '.LiveModePaywallActivity', "debug-only paywall activity")
+reject("app/src/main/AndroidManifest.xml", '.LiveModePaywallActivity', "formal release excludes paywall activity")
 
 billing = "app/src/main/kotlin/com/sktpj/gbmoder/LiveModeBilling.kt"
 require(billing, 'PRODUCT_ID = "live_mode"', "subscription product")
@@ -33,8 +34,8 @@ require(billing, "LiveModePaywallActivity", "dedicated paywall")
 require(billing, "openSubscriptionManagement", "subscription management")
 
 prepare = "tools/prepare_billing_kotlin_v035.py"
-require(prepare, "LiveModeSubscriptionCard()", "main-screen subscription card")
-require(prepare, "ライブモード開始", "live button labeling")
+require(prepare, "LiveModeSubscriptionCard()", "main-screen subscription card implementation")
+require(prepare, "ライブモード開始", "live button labeling implementation")
 
 gate = "tools/finish_billing_gate_v035.py"
 require(gate, "LiveModeBillingManager.isEntitled()", "live entitlement gate")
@@ -59,4 +60,4 @@ reject(
     "file conversion must remain free",
 )
 
-print("LIVE BILLING FEATURE GATE: PASS")
+print("LIVE BILLING DEBUG FEATURE GATE: PASS")

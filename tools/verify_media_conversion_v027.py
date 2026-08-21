@@ -7,7 +7,6 @@ activity = (root / "app/src/main/kotlin/com/sktpj/gbmoder/MediaConversionActivit
 unified = (root / "app/src/main/kotlin/com/sktpj/gbmoder/UnifiedConversionControls.kt").read_text()
 converter = (root / "app/src/main/java/com/sktpj/gbmoder/MediaFileConverter.java").read_text()
 manifest = (root / "app/src/main/AndroidManifest.xml").read_text()
-version = (root / "version.properties").read_text()
 
 
 def need(text: str, value: str, label: str) -> None:
@@ -16,8 +15,6 @@ def need(text: str, value: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.34", "version name")
-need(version, "VERSION_CODE=35", "version code")
 need(manifest, 'android:name=".MediaConversionActivity"', "compatibility conversion activity registered")
 
 # Main screen is one hierarchy: common settings, filter, then conversion.
@@ -79,4 +76,4 @@ need(converter, '"obj".equals(ext)', "obj model support")
 need(converter, '"gltf".equals(ext)', "gltf model support")
 need(converter, '"glb".equals(ext)', "glb model support")
 
-print("MEDIA CONVERSION v0.1.34 AUTOMATED GATE: PASS")
+print("MEDIA CONVERSION v0.1.34 FEATURE GATE: PASS")

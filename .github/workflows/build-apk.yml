@@ -104,6 +104,10 @@ jobs:
             status=$?
           fi
           if [ "$status" = "0" ]; then
+            python3 tools/verify_resolution_default_v040.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
             python3 tools/verify_unified_conversion_ui_v034.py
             status=$?
           fi

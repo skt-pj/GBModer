@@ -18,8 +18,8 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.31", "version name")
-need(version, "VERSION_CODE=32", "version code")
+need(version, "VERSION_NAME=0.1.32", "version name")
+need(version, "VERSION_CODE=33", "version code")
 need(manifest, 'android:name=".VideoDiagnosticsActivity"', "diagnostics activity registered")
 need(activity, 'testTag("video-diagnostics-screen")', "diagnostics screen")
 need(activity, 'testTag("diagnostics-top-quiet-zone")', "Pixel-safe diagnostics top quiet zone")
@@ -44,9 +44,9 @@ need(localization, '"ログ同期" to R.string.video_diagnostics_action', "main 
 need(generated_main, "new Intent(MainActivity.this, VideoDiagnosticsActivity.class)", "main diagnostics route")
 need(generated_main, "MediaConversionActivity.EXTRA_RESOLUTION", "diagnostics uses current resolution")
 
-need(generated_converter, "MediaExtractor timingExtractor", "source timing extractor")
-need(generated_converter, "timingExtractor.getSampleTime()", "source PTS-driven conversion")
-need(generated_converter, "retriever.getScaledFrameAtTime", "target-size-first conversion")
+need(generated_converter, "MediaExtractor timingExtractor", "source timing extractor retained for CPU fallback")
+need(generated_converter, "timingExtractor.getSampleTime()", "source PTS CPU fallback")
+need(generated_converter, "retriever.getScaledFrameAtTime", "target-size-first CPU fallback")
 need(generated_converter, "presentationTimeUs", "source presentation timestamp queueing")
 need(generated_converter, "source_pts=true", "conversion timing evidence")
 if "frameIndex * frameDurationUs" in generated_converter:
@@ -71,4 +71,4 @@ for path in (
     text = (root / path).read_text()
     need(text, 'name="diag_encode_ms"', f"encoder timing localized: {path}")
 
-print("VIDEO PIPELINE DIAGNOSTICS v0.1.31 AUTOMATED GATE: PASS")
+print("VIDEO PIPELINE DIAGNOSTICS v0.1.32 AUTOMATED GATE: PASS")

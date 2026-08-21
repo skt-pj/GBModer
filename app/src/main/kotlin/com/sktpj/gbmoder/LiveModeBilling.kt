@@ -191,7 +191,7 @@ object LiveModeBillingManager : PurchasesUpdatedListener {
         return result
     }
 
-    override fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
+    override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
         when (billingResult.responseCode) {
             BillingClient.BillingResponseCode.OK -> processPurchases(purchases.orEmpty())
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> refreshEntitlement()

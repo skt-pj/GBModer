@@ -67,11 +67,16 @@ android {
 
     buildFeatures {
         compose true
+        buildConfig true
     }
 
     buildTypes {
         debug {
             signingConfig signingConfigs.commonStable
+        }
+        release {
+            signingConfig signingConfigs.commonStable
+            minifyEnabled false
         }
     }
 

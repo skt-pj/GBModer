@@ -4,13 +4,15 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text as MaterialText
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun AppMenuShortcut(options: MediaFileConverter.Options) {
@@ -19,7 +21,7 @@ fun AppMenuShortcut(options: MediaFileConverter.Options) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
-        TextButton(
+        IconButton(
             onClick = {
                 context.startActivity(
                     Intent(context, AppMenuActivity::class.java).apply {
@@ -33,9 +35,9 @@ fun AppMenuShortcut(options: MediaFileConverter.Options) {
             },
             modifier = Modifier.testTag("app-menu"),
         ) {
-            MaterialText(
-                text = "⋮",
-                style = MaterialTheme.typography.headlineSmall,
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.menu_open),
             )
         }
     }

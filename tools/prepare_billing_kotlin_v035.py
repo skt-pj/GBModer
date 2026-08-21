@@ -26,6 +26,119 @@ def replace_ui_once(old: str, new: str, label: str) -> None:
 
 
 replace_ui_once(
+    '        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))\n\n        if (!state.accessibilityReady) {',
+    '''        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))
+
+        AppMenuShortcut(
+            options = MediaFileConverter.Options(
+                modeValueForPosition(modePosition),
+                resolutionValueForPosition(resolutionPosition),
+                brightness.roundToInt(),
+                contrast.roundToInt(),
+                dither,
+            ),
+        )
+
+        if (!state.accessibilityReady) {''',
+    "main app menu shortcut",
+)
+
+replace_ui_once(
+    '''@Composable
+private fun FirstSetupCard(actions: GbModerUiActions) {
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("first-setup-card"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("初回設定", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "ユーザー補助を有効にして、画面のテキストを取得します。",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Button(
+                onClick = actions::onAccessibilitySetup,
+                modifier = Modifier.fillMaxWidth().testTag("accessibility-setup"),
+            ) {
+                Text("ユーザー補助を有効化")
+            }
+        }
+    }
+}
+''',
+    '''@Composable
+private fun FirstSetupCard(actions: GbModerUiActions) {
+    var disclosureVisible by rememberSaveable { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("first-setup-card"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("初回設定", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "ユーザー補助を有効にして、画面のテキストを取得します。",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Button(
+                onClick = { disclosureVisible = true },
+                modifier = Modifier.fillMaxWidth().testTag("accessibility-setup"),
+            ) {
+                Text("ユーザー補助を有効化")
+            }
+        }
+    }
+
+    if (disclosureVisible) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { disclosureVisible = false },
+            title = {
+                androidx.compose.material3.Text(
+                    androidx.compose.ui.res.stringResource(R.string.accessibility_disclosure_title),
+                )
+            },
+            text = {
+                androidx.compose.material3.Text(
+                    androidx.compose.ui.res.stringResource(R.string.accessibility_disclosure_body),
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        disclosureVisible = false
+                        actions.onAccessibilitySetup()
+                    },
+                    modifier = Modifier.testTag("accessibility-disclosure-accept"),
+                ) {
+                    androidx.compose.material3.Text(
+                        androidx.compose.ui.res.stringResource(R.string.accessibility_disclosure_accept),
+                    )
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { disclosureVisible = false },
+                    modifier = Modifier.testTag("accessibility-disclosure-decline"),
+                ) {
+                    androidx.compose.material3.Text(
+                        androidx.compose.ui.res.stringResource(R.string.accessibility_disclosure_decline),
+                    )
+                }
+            },
+        )
+    }
+}
+''',
+    "accessibility prominent disclosure",
+)
+
+replace_ui_once(
     '        HorizontalDivider()\n        SectionTitle("フィルター")\n\n        Button(\n',
     '        HorizontalDivider()\n        SectionTitle("フィルター")\n\n        LiveModeSubscriptionCard()\n\n        Button(\n',
     "live subscription card",
@@ -44,4 +157,4 @@ replace_ui_once(
 )
 
 ui_path.write_text(ui_text)
-print("v0.1.35 billing Kotlin UI prepared")
+print("v0.1.36 menu, privacy, accessibility disclosure, and billing Kotlin UI prepared")

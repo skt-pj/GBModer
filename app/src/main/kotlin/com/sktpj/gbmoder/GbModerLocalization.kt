@@ -8,13 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.TextUnit
 
 /**
@@ -27,6 +27,13 @@ import androidx.compose.ui.unit.TextUnit
 object GbModerLocalization {
     private val exact = mapOf(
         "停止中" to R.string.stopped_idle,
+        "共通" to R.string.common_section,
+        "フィルター" to R.string.filter_section,
+        "変換" to R.string.conversion_section,
+        "対象ファイルを選択" to R.string.conversion_source_select,
+        "出力先を選択" to R.string.conversion_output_select,
+        "対応していないファイル形式です" to R.string.unsupported_file_type,
+        "変換しました" to R.string.conversion_completed,
         "表示モード" to R.string.display_mode,
         "解像度" to R.string.resolution,
         "スマホの元解像度 / 100%" to R.string.native_resolution,

@@ -28,6 +28,7 @@ require(build, "buildConfigField 'boolean', 'DEBUG_FEATURES'", "BuildConfig debu
 require(build, "manifestPlaceholders = [debugFeaturesEnabled:", "manifest debug placeholder")
 require(build, "prepare_billing_release_v041.py", "v041 Kotlin wrapper tracked")
 require(build, "finish_release_ui_v041.py", "v041 release UI finalizer tracked")
+require(build, "finish_release_polish_v041.py", "v041 release polish tracked")
 require(build, "finish_debug_features_v041.py", "v041 Java gate tracked")
 
 main_manifest = "app/src/main/AndroidManifest.xml"
@@ -75,6 +76,13 @@ require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n        HorizontalDivider()\n 
 require(menu, "R.string.menu_description_v041", "release menu copy")
 require(menu, "R.string.menu_libraries_description_v041", "release libraries copy")
 require(menu, "R.string.menu_privacy_description_v041", "release privacy copy")
+require(menu, "R.string.privacy_network_body_v041", "release network privacy copy")
+require(menu, "R.string.privacy_retention_body_v041", "release retention privacy copy")
+reject(menu, 'LibraryInfo("JUnit"', "release library page excludes JUnit")
+reject(menu, 'LibraryInfo("Android Gradle Plugin"', "release library page excludes AGP")
+reject(menu, 'LibraryInfo("Kotlin Compose plugin"', "release library page excludes build plugin")
+reject(menu, "R.string.menu_package_format", "release app info omits package identifier")
+reject(menu, "R.string.library_scope_build_test", "release library cards omit build/test scope copy")
 
 main = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MainActivity.java"
 require(main, "if (BuildConfig.DEBUG_FEATURES) {\n            LiveModeBillingManager.initialize(this);", "main billing init debug-only")
@@ -88,6 +96,9 @@ for values_dir in ("values", "values-ja", "values-zh-rCN", "values-ko"):
     require(strings, 'name="menu_description_v041"', f"{values_dir} release menu copy")
     require(strings, 'name="menu_libraries_description_v041"', f"{values_dir} release libraries copy")
     require(strings, 'name="menu_privacy_description_v041"', f"{values_dir} release privacy copy")
+    privacy_strings = f"app/src/main/res/{values_dir}/strings_release_privacy_v041.xml"
+    require(privacy_strings, 'name="privacy_network_body_v041"', f"{values_dir} release network privacy copy")
+    require(privacy_strings, 'name="privacy_retention_body_v041"', f"{values_dir} release retention privacy copy")
 
 workflow = ".github/workflows/build-apk.yml"
 require(workflow, "python3 tools/verify_release_debug_v041.py", "v041 release/debug gate in CI")

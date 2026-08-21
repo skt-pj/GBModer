@@ -90,6 +90,15 @@ new = '''        } catch (Throwable error) {
 if gpu.count(old) != 1:
     raise SystemExit("GPU encoder error bridge marker mismatch")
 gpu = gpu.replace(old, new, 1)
+listener_old = '                decoderTexture.setOnFrameAvailableListener(this);\n'
+listener_new = '''                decoderTexture.setOnFrameAvailableListener(
+                        this,
+                        new android.os.Handler(android.os.Looper.getMainLooper())
+                );
+'''
+if gpu.count(listener_old) != 1:
+    raise SystemExit("SurfaceTexture listener marker mismatch")
+gpu = gpu.replace(listener_old, listener_new, 1)
 gpu_path.write_text(gpu)
 
 print("v0.1.32 video conversion defaults to decoder Surface -> OpenGL ES -> encoder Surface")

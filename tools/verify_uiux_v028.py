@@ -30,7 +30,7 @@ need(compose, "FilledTonalButton", "Material 3 secondary conversion buttons")
 need(compose, "ButtonDefaults.IconSize", "Material 3 icon sizing")
 need(compose, "ButtonDefaults.IconSpacing", "Material 3 icon spacing")
 for tag in ("convert-photo", "convert-video", "convert-model"):
-    need(compose, f'testTag("{tag}")', f"conversion action {tag}")
+    need(compose, f'tag = "{tag}"', f"conversion action {tag}")
 
 need(media, "Scaffold(", "conversion Material 3 scaffold")
 need(media, "WindowInsets.safeDrawing", "conversion safe drawing insets")

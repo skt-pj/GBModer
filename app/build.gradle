@@ -28,6 +28,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_billing_gate_v035.py'))
     inputs.file(rootProject.file('tools/finish_portrait_video_v038.py'))
     inputs.file(rootProject.file('tools/finish_portrait_orientation_v039.py'))
+    inputs.file(rootProject.file('tools/finish_resolution_default_v040.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,

@@ -26,6 +26,40 @@ def replace_ui_once(old: str, new: str, label: str) -> None:
 
 
 replace_ui_once(
+    'private const val DEFAULT_RESOLUTION_POSITION = 7',
+    'private const val DEFAULT_RESOLUTION_POSITION = 0',
+    "GB default resolution",
+)
+
+replace_ui_once(
+    '''        for (percent in 5..95 step 5) {
+            add("端末比 / ${percent}%")
+        }
+''',
+    '''        for (percent in 5..95 step 5) {
+            if (percent == 20) {
+                add("端末比 / 20%（テキスト表示時推奨）")
+            } else {
+                add("端末比 / ${percent}%")
+            }
+        }
+''',
+    "20 percent text recommendation label",
+)
+
+replace_ui_once(
+    'description = "画面内の文字を認識し、低解像度向け8×8フォントで再描画します。GB / 160×144で有効です。",',
+    'description = "画面内の文字を認識し、低解像度向け8×8フォントで再描画します。端末比 / 20%はテキスト表示時の推奨解像度です。",',
+    "text recommendation description",
+)
+
+replace_ui_once(
+    'else -> GameBoyFilter.phoneResolution(20)',
+    'else -> GameBoyFilter.RESOLUTION_GB',
+    "resolution fallback defaults to GB",
+)
+
+replace_ui_once(
     '        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))\n\n        if (!state.accessibilityReady) {',
     '''        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))
 
@@ -157,4 +191,31 @@ replace_ui_once(
 )
 
 ui_path.write_text(ui_text)
-print("v0.1.36 menu, privacy, accessibility disclosure, and billing Kotlin UI prepared")
+
+localization_path = generated_root / "com/sktpj/gbmoder/GbModerLocalization.kt"
+localization_text = localization_path.read_text()
+
+
+def replace_localization_once(old: str, new: str, label: str) -> None:
+    global localization_text
+    count = localization_text.count(old)
+    if count != 1:
+        raise SystemExit(f"{label}: expected exactly one match, got {count}")
+    localization_text = localization_text.replace(old, new, 1)
+
+
+replace_localization_once(
+    '        "スマホの元解像度 / 100%" to R.string.native_resolution,\n',
+    '        "スマホの元解像度 / 100%" to R.string.native_resolution,\n'
+    '        "端末比 / 20%（テキスト表示時推奨）" to R.string.phone_ratio_text_recommended,\n',
+    "20 percent recommendation localization",
+)
+
+replace_localization_once(
+    '        "画面内の文字を認識し、低解像度向け8×8フォントで再描画します。GB / 160×144で有効です。" to R.string.readable_text_description,',
+    '        "画面内の文字を認識し、低解像度向け8×8フォントで再描画します。端末比 / 20%はテキスト表示時の推奨解像度です。" to R.string.readable_text_description_v040,',
+    "text recommendation localization",
+)
+
+localization_path.write_text(localization_text)
+print("v0.1.40 GB default resolution, text recommendation, menu, privacy, accessibility disclosure, and billing Kotlin UI prepared")

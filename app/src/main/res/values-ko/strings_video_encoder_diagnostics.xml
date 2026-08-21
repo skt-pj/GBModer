@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diag_encode_ms">H.264 인코드 / 프레임</string>
+    <string name="diag_stage_encoder">H.264 인코더 측정 중</string>
+</resources>

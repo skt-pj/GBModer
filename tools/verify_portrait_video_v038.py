@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.38", "version name")
-require("version.properties", "VERSION_CODE=39", "version code")
+require("version.properties", "VERSION_NAME=0.1.39", "version name")
+require("version.properties", "VERSION_CODE=40", "version code")
 require("tools/prepare_all_sources_v020.py", "finish_portrait_video_v038.py", "portrait finalizer registered")
 require("app/build.gradle", "finish_portrait_video_v038.py", "portrait finalizer tracked by Gradle")
 
@@ -38,7 +38,7 @@ require(generated_gpu, "getCenterCropBoundsForTarget", "GPU crop follows oriente
 require(generated_gpu, 'decoder_rotation=0', "GPU rotation ownership diagnostic")
 require(generated_gpu, 'portrait_output=', "GPU portrait output diagnostic")
 require(generated_gpu, 'display=', "GPU display dimension diagnostic")
-require(generated_gpu, "textureCoordinates(\n                    rotation,", "manual display-space rotation retained")
+require(generated_gpu, "VideoGpuConverter.mapDisplayUvForRotation(\n                    rotation,", "manual display-space rotation retained")
 
 generated_converter = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MediaFileConverter.java"
 require(generated_converter, "GameBoyFilter.getVideoTargetWidth", "CPU fallback portrait output width")
@@ -54,11 +54,10 @@ require(tests, "assertEquals(144, GameBoyFilter.getVideoTargetWidth(GameBoyFilte
 require(tests, "assertEquals(160, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_GBA, 1080, 1920))", "GBA portrait 160x240")
 require(tests, "assertEquals(192, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_DS, 1080, 1920))", "DS portrait 192x256")
 
-# The primary bug was a portrait display being encoded into a landscape fixed-preset target.
 reject(
     "tools/finish_portrait_video_v038.py",
     "getTargetWidth(options.resolution, displayWidth));\n            int targetHeight = makeEven(GameBoyFilter.getTargetHeight(options.resolution, displayHeight))",
     "portrait GPU target no longer uses un-oriented fixed dimensions",
 )
 
-print("PORTRAIT VIDEO ASPECT v0.1.38 AUTOMATED GATE: PASS")
+print("PORTRAIT VIDEO ASPECT v0.1.39 AUTOMATED GATE: PASS")

@@ -1,5 +1,6 @@
 package com.sktpj.gbmoder;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -30,5 +31,93 @@ public class GameBoyFilterResolutionTest {
     public void legacyThirdAndTwoThirdScalesRemainReadable() {
         assertEquals(330, GameBoyFilter.getTargetWidth(GameBoyFilter.RESOLUTION_PHONE_33, 1000));
         assertEquals(1340, GameBoyFilter.getTargetHeight(GameBoyFilter.RESOLUTION_PHONE_67, 2000));
+    }
+
+    @Test
+    public void fixedPresetsCenterCropWideSourcesInsteadOfStretching() {
+        assertArrayEquals(
+                new int[]{360, 0, 1560, 1080},
+                GameBoyFilter.getCenterCropBounds(GameBoyFilter.RESOLUTION_GB, 1920, 1080)
+        );
+        assertArrayEquals(
+                new int[]{150, 0, 1770, 1080},
+                GameBoyFilter.getCenterCropBounds(GameBoyFilter.RESOLUTION_GBA, 1920, 1080)
+        );
+        assertArrayEquals(
+                new int[]{240, 0, 1680, 1080},
+                GameBoyFilter.getCenterCropBounds(GameBoyFilter.RESOLUTION_DS, 1920, 1080)
+        );
+    }
+
+    @Test
+    public void fixedPresetsCenterCropTallSourcesInsteadOfStretching() {
+        assertArrayEquals(
+                new int[]{0, 474, 1080, 1446},
+                GameBoyFilter.getCenterCropBounds(GameBoyFilter.RESOLUTION_GB, 1080, 1920)
+        );
+        assertArrayEquals(
+                new int[]{0, 600, 1080, 1320},
+                GameBoyFilter.getCenterCropBounds(GameBoyFilter.RESOLUTION_GBA, 1080, 1920)
+        );
+        assertArrayEquals(
+                new int[]{0, 555, 1080, 1365},
+                GameBoyFilter.getCenterCropBounds(GameBoyFilter.RESOLUTION_DS, 1080, 1920)
+        );
+    }
+
+    @Test
+    public void phoneAndNativeResolutionKeepWholeSourceAspect() {
+        assertArrayEquals(
+                new int[]{0, 0, 1080, 1920},
+                GameBoyFilter.getCenterCropBounds("phone_20", 1080, 1920)
+        );
+        assertArrayEquals(
+                new int[]{0, 0, 1080, 1920},
+                GameBoyFilter.getCenterCropBounds(GameBoyFilter.RESOLUTION_NATIVE, 1080, 1920)
+        );
+    }
+
+    @Test
+    public void targetFirstDecodeKeepsSourceAspectUntilCrop() {
+        assertEquals(
+                256,
+                GameBoyFilter.getCenterCropWorkingWidth(
+                        GameBoyFilter.RESOLUTION_GB,
+                        1920,
+                        1080,
+                        160,
+                        144
+                )
+        );
+        assertEquals(
+                144,
+                GameBoyFilter.getCenterCropWorkingHeight(
+                        GameBoyFilter.RESOLUTION_GB,
+                        1920,
+                        1080,
+                        160,
+                        144
+                )
+        );
+        assertEquals(
+                160,
+                GameBoyFilter.getCenterCropWorkingWidth(
+                        GameBoyFilter.RESOLUTION_GB,
+                        1080,
+                        1920,
+                        160,
+                        144
+                )
+        );
+        assertEquals(
+                284,
+                GameBoyFilter.getCenterCropWorkingHeight(
+                        GameBoyFilter.RESOLUTION_GB,
+                        1080,
+                        1920,
+                        160,
+                        144
+                )
+        );
     }
 }

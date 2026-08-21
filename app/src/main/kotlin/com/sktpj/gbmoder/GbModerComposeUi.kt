@@ -70,6 +70,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
+private const val FIRST_PHONE_RESOLUTION_POSITION = 4
+private const val LAST_PHONE_RESOLUTION_POSITION = 22
+private const val NATIVE_RESOLUTION_POSITION = 23
+private const val DEFAULT_RESOLUTION_POSITION = 7
+
 interface GbModerUiActions {
     fun onStart(
         modePosition: Int,
@@ -194,7 +199,7 @@ private fun SettingsPane(
     modifier: Modifier = Modifier,
 ) {
     var modePosition by rememberSaveable { mutableStateOf(0) }
-    var resolutionPosition by rememberSaveable { mutableStateOf(0) }
+    var resolutionPosition by rememberSaveable { mutableStateOf(DEFAULT_RESOLUTION_POSITION) }
     var brightness by rememberSaveable { mutableStateOf(6f) }
     var contrast by rememberSaveable { mutableStateOf(122f) }
     var dither by rememberSaveable { mutableStateOf(true) }
@@ -203,18 +208,16 @@ private fun SettingsPane(
     var detailsExpanded by rememberSaveable { mutableStateOf(false) }
     var resolutionMenuExpanded by remember { mutableStateOf(false) }
 
-    val resolutions = listOf(
-        "GB / 160×144",
-        "GBC / 160×144",
-        "GBA / 240×160",
-        "DS / 256×192",
-        "端末比 / 25%",
-        "端末比 / 33%",
-        "端末比 / 50%",
-        "端末比 / 67%",
-        "端末比 / 75%",
-        "スマホの元解像度",
-    )
+    val resolutions = buildList {
+        add("GB / 160×144")
+        add("GBC / 160×144")
+        add("GBA / 240×160")
+        add("DS / 256×192")
+        for (percent in 5..95 step 5) {
+            add("端末比 / ${percent}%")
+        }
+        add("スマホの元解像度 / 100%")
+    }
 
     Column(
         modifier = modifier
@@ -269,7 +272,7 @@ private fun SettingsPane(
             }
         }
         Text(
-            "表示モードの色・階調処理と解像度の出力サイズを組み合わせて適用します。",
+            "端末比は5%刻みで選択できます。表示モードの色・階調処理と解像度の出力サイズを組み合わせて適用します。",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -563,6 +566,20 @@ private fun ConversionActionButton(
     }
 }
 
+private fun resolutionValueForPosition(resolutionPosition: Int): String {
+    return when {
+        resolutionPosition == 0 -> GameBoyFilter.RESOLUTION_GB
+        resolutionPosition == 1 -> GameBoyFilter.RESOLUTION_GBC
+        resolutionPosition == 2 -> GameBoyFilter.RESOLUTION_GBA
+        resolutionPosition == 3 -> GameBoyFilter.RESOLUTION_DS
+        resolutionPosition in FIRST_PHONE_RESOLUTION_POSITION..LAST_PHONE_RESOLUTION_POSITION -> {
+            GameBoyFilter.phoneResolution((resolutionPosition - 3) * 5)
+        }
+        resolutionPosition == NATIVE_RESOLUTION_POSITION -> GameBoyFilter.RESOLUTION_NATIVE
+        else -> GameBoyFilter.phoneResolution(20)
+    }
+}
+
 private fun launchMediaConversion(
     context: Context,
     kind: String,
@@ -578,18 +595,7 @@ private fun launchMediaConversion(
         3 -> GameBoyFilter.MODE_DS
         else -> GameBoyFilter.MODE_GB
     }
-    val resolution = when (resolutionPosition) {
-        1 -> GameBoyFilter.RESOLUTION_GBC
-        2 -> GameBoyFilter.RESOLUTION_GBA
-        3 -> GameBoyFilter.RESOLUTION_DS
-        4 -> GameBoyFilter.RESOLUTION_PHONE_25
-        5 -> GameBoyFilter.RESOLUTION_PHONE_33
-        6 -> GameBoyFilter.RESOLUTION_PHONE_50
-        7 -> GameBoyFilter.RESOLUTION_PHONE_67
-        8 -> GameBoyFilter.RESOLUTION_PHONE_75
-        9 -> GameBoyFilter.RESOLUTION_NATIVE
-        else -> GameBoyFilter.RESOLUTION_GB
-    }
+    val resolution = resolutionValueForPosition(resolutionPosition)
     context.startActivity(
         Intent(context, MediaConversionActivity::class.java).apply {
             putExtra(MediaConversionActivity.EXTRA_KIND, kind)

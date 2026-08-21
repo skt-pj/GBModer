@@ -7,8 +7,8 @@
     <string name="display_mode">Display mode</string>
     <string name="resolution">Resolution</string>
     <string name="phone_ratio_format">Device ratio / %1$d%%</string>
-    <string name="native_resolution">Original device resolution / 100%%</string>
-    <string name="resolution_help">Device-ratio resolutions are available in 5%% steps. Color/gradation mode and output resolution are applied together.</string>
+    <string name="native_resolution">Original device resolution / 100%</string>
+    <string name="resolution_help">Device-ratio resolutions are available in 5% steps. Color/gradation mode and output resolution are applied together.</string>
     <string name="brightness">Brightness</string>
     <string name="contrast">Contrast</string>
     <string name="dither">Dithering</string>
@@ -68,12 +68,14 @@
     <string name="notification_filter_active">Converting another app’s screen to a Game Boy-style display</string>
     <string name="notification_stop">Stop</string>
     <string name="notification_channel_name">GBModer screen filter</string>
+    <string name="notification_channel_description">Persistent notification while GBModer is filtering another app.</string>
     <string name="capture_accessibility_required">Enable the GBModer Accessibility service.</string>
+    <string name="whole_screen_not_supported">Full-screen sharing cannot be used. Select “A single app”.</string>
 
     <string name="adb_guide_title">ADB display setup</string>
     <string name="adb_open_developer_settings">Developer settings</string>
     <string name="adb_guide_close">Close</string>
-    <string name="adb_guide_message">You can change Android display density and font scale from a computer using ADB.\n\nInitial setup\n1. Settings → About phone → tap Build number 7 times\n2. Open Developer options\n3. Turn on USB debugging\n4. Connect to the computer and approve the debugging prompt\n5. Run adb devices and verify the device is listed as device\n\nWireless ADB (Android 11+)\n1. Developer options → Wireless debugging\n2. Open “Pair device with pairing code”\n3. On the computer: adb pair IP:pairing-port\n4. Enter the 6-digit code\n5. If needed: adb connect IP:connection-port\n\nCheck current values\nDisplay density: adb shell wm density\nFont scale: adb shell settings get system font_scale\n\nExamples\nDisplay density: adb shell wm density 360\nFont 85%%: adb shell settings put system font_scale 0.85\nFont 100%%: adb shell settings put system font_scale 1.0\n\nRestore defaults\nDisplay density: adb shell wm density reset\nFont: adb shell settings put system font_scale 1.0\n\nRecord the current wm density value before changing it because an appropriate density varies by device.</string>
+    <string name="adb_guide_message">You can change Android display density and font scale from a computer using ADB.\n\nInitial setup\n1. Settings → About phone → tap Build number 7 times\n2. Open Developer options\n3. Turn on USB debugging\n4. Connect to the computer and approve the debugging prompt\n5. Run adb devices and verify the device is listed as device\n\nWireless ADB (Android 11+)\n1. Developer options → Wireless debugging\n2. Open “Pair device with pairing code”\n3. On the computer: adb pair IP:pairing-port\n4. Enter the 6-digit code\n5. If needed: adb connect IP:connection-port\n\nCheck current values\nDisplay density: adb shell wm density\nFont scale: adb shell settings get system font_scale\n\nExamples\nDisplay density: adb shell wm density 360\nFont 85%: adb shell settings put system font_scale 0.85\nFont 100%: adb shell settings put system font_scale 1.0\n\nRestore defaults\nDisplay density: adb shell wm density reset\nFont: adb shell settings put system font_scale 1.0\n\nRecord the current wm density value before changing it because an appropriate density varies by device.</string>
 
     <string name="status_generic">Status updated</string>
     <string name="status_localized_fallback">The operation returned a message that is not yet translated.</string>

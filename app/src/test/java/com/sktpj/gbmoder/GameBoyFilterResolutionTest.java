@@ -120,4 +120,68 @@ public class GameBoyFilterResolutionTest {
                 )
         );
     }
+
+    @Test
+    public void portraitVideoSwapsFixedPresetDimensions() {
+        assertEquals(144, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_GB, 1080, 1920));
+        assertEquals(160, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_GB, 1080, 1920));
+        assertEquals(144, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_GBC, 1080, 1920));
+        assertEquals(160, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_GBC, 1080, 1920));
+        assertEquals(160, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_GBA, 1080, 1920));
+        assertEquals(240, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_GBA, 1080, 1920));
+        assertEquals(192, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_DS, 1080, 1920));
+        assertEquals(256, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_DS, 1080, 1920));
+    }
+
+    @Test
+    public void landscapeVideoKeepsFixedPresetDimensions() {
+        assertEquals(160, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_GB, 1920, 1080));
+        assertEquals(144, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_GB, 1920, 1080));
+        assertEquals(240, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_GBA, 1920, 1080));
+        assertEquals(160, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_GBA, 1920, 1080));
+        assertEquals(256, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_DS, 1920, 1080));
+        assertEquals(192, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_DS, 1920, 1080));
+    }
+
+    @Test
+    public void portraitVideoCropsToRotatedPresetAspect() {
+        assertArrayEquals(
+                new int[]{0, 360, 1080, 1560},
+                GameBoyFilter.getCenterCropBoundsForTarget(
+                        GameBoyFilter.RESOLUTION_GB,
+                        1080,
+                        1920,
+                        144,
+                        160
+                )
+        );
+        assertArrayEquals(
+                new int[]{0, 150, 1080, 1770},
+                GameBoyFilter.getCenterCropBoundsForTarget(
+                        GameBoyFilter.RESOLUTION_GBA,
+                        1080,
+                        1920,
+                        160,
+                        240
+                )
+        );
+        assertArrayEquals(
+                new int[]{0, 240, 1080, 1680},
+                GameBoyFilter.getCenterCropBoundsForTarget(
+                        GameBoyFilter.RESOLUTION_DS,
+                        1080,
+                        1920,
+                        192,
+                        256
+                )
+        );
+    }
+
+    @Test
+    public void portraitPhoneAndNativeVideoKeepSourceDimensions() {
+        assertEquals(216, GameBoyFilter.getVideoTargetWidth("phone_20", 1080, 1920));
+        assertEquals(384, GameBoyFilter.getVideoTargetHeight("phone_20", 1080, 1920));
+        assertEquals(1080, GameBoyFilter.getVideoTargetWidth(GameBoyFilter.RESOLUTION_NATIVE, 1080, 1920));
+        assertEquals(1920, GameBoyFilter.getVideoTargetHeight(GameBoyFilter.RESOLUTION_NATIVE, 1080, 1920));
+    }
 }

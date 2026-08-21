@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_section">共通</string>
+    <string name="filter_section">フィルター</string>
+    <string name="conversion_section">変換</string>
+    <string name="conversion_source_select">対象ファイルを選択</string>
+    <string name="conversion_output_select">出力先を選択</string>
+    <string name="conversion_run">変換</string>
+    <string name="unsupported_file_type">対応していないファイル形式です</string>
+    <string name="conversion_completed">変換しました</string>
+</resources>

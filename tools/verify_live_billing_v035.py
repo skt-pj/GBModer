@@ -56,7 +56,7 @@ require(
     "free conversion UI retained",
 )
 reject(
-    "app/src/main/kotlin/com/sktpj/gbmoder/MediaFileConverter.kt",
+    "app/src/main/java/com/sktpj/gbmoder/MediaFileConverter.java",
     "LiveModeBillingManager",
     "file conversion must remain free",
 )

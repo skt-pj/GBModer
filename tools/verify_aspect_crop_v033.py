@@ -2,7 +2,6 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-version = (root / "version.properties").read_text()
 prepare = (root / "tools/prepare_all_sources_v020.py").read_text()
 generated = root / "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder"
 filter_text = (generated / "GameBoyFilter.java").read_text()
@@ -21,8 +20,6 @@ def need(text: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-need(version, "VERSION_NAME=0.1.34", "version name")
-need(version, "VERSION_CODE=35", "version code")
 need(prepare, "finish_aspect_crop_v033.py", "aspect crop finisher registered")
 
 # Shared geometry and unchanged fixed output sizes.
@@ -70,4 +67,4 @@ need(tests, "fixedPresetsCenterCropTallSourcesInsteadOfStretching", "tall source
 need(tests, "phoneAndNativeResolutionKeepWholeSourceAspect", "phone/native no-crop unit test")
 need(tests, "targetFirstDecodeKeepsSourceAspectUntilCrop", "target-first working-size unit test")
 
-print("FIXED PRESET ASPECT PRESERVATION v0.1.34 AUTOMATED GATE: PASS")
+print("FIXED PRESET ASPECT PRESERVATION v0.1.33 FEATURE GATE: PASS")

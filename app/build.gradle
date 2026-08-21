@@ -45,6 +45,7 @@ def prepareBillingKotlin = tasks.register('prepareBillingKotlin', Exec) {
     inputs.file(rootProject.file('tools/prepare_billing_kotlin_v035.py'))
     inputs.file(rootProject.file('tools/prepare_billing_release_v041.py'))
     inputs.file(rootProject.file('tools/finish_release_ui_v041.py'))
+    inputs.file(rootProject.file('tools/finish_release_polish_v041.py'))
     outputs.dir(generatedBillingKotlinDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_billing_release_v041.py').absolutePath,

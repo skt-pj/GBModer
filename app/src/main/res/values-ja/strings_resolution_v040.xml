@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_ratio_text_recommended">端末比 / 20%（テキスト表示時推奨）</string>
+    <string name="readable_text_description_v040">画面内の文字を認識し、低解像度向け8×8フォントで再描画します。端末比 / 20%はテキスト表示時の推奨解像度です。</string>
+</resources>

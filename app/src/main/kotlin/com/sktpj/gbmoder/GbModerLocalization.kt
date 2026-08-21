@@ -58,7 +58,7 @@ object GbModerLocalization {
         "互換モード（Android 14+）" to R.string.compatibility_mode_android14,
         "MediaProjectionを使用します。通常はこちらを使用してください。" to R.string.media_projection_description,
         "Accessibility Windowを使用します。Android 14以降向けの互換モードです。" to R.string.accessibility_window_description,
-        "ログ同期" to R.string.sync_logs,
+        "ログ同期" to R.string.video_diagnostics_action,
         "ADB手順" to R.string.adb_steps,
         "画面共有では『1つのアプリ』を選択してください。画面全体を選ぶと自己キャプチャ検出で停止します。DRM / FLAG_SECUREで保護された画面は取得できません。" to R.string.capture_note,
         "プレビュー" to R.string.preview,

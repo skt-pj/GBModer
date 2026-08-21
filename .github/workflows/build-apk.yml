@@ -75,6 +75,10 @@ jobs:
             python3 tools/verify_media_conversion_v027.py
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_uiux_v028.py
+            status=$?
+          fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"
           exit 0
 

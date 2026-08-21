@@ -1,8 +1,6 @@
 package com.sktpj.gbmoder
 
 import android.app.Activity
-import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.view.View
 import androidx.compose.foundation.background
@@ -18,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -32,9 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -60,7 +55,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -231,6 +225,8 @@ private fun SettingsPane(
             FirstSetupCard(actions)
         }
 
+        SectionTitle("共通")
+
         SectionTitle("表示モード")
         val modes = listOf("GB", "GBC", "GBA", "DS")
         SingleChoiceSegmentedButtonRow(
@@ -310,6 +306,9 @@ private fun SettingsPane(
             tag = "text-recognition-row",
         )
 
+        HorizontalDivider()
+        SectionTitle("フィルター")
+
         Button(
             onClick = {
                 if (state.running) {
@@ -354,12 +353,18 @@ private fun SettingsPane(
             )
         }
 
-        MediaConversionCard(
-            modePosition = modePosition,
-            resolutionPosition = resolutionPosition,
-            brightness = brightness.roundToInt(),
-            contrast = contrast.roundToInt(),
-            dither = dither,
+        HorizontalDivider()
+        SectionTitle("変換")
+
+        UnifiedConversionControls(
+            options = MediaFileConverter.Options(
+                modeValueForPosition(modePosition),
+                resolutionValueForPosition(resolutionPosition),
+                brightness.roundToInt(),
+                contrast.roundToInt(),
+                dither,
+            ),
+            modifier = Modifier.fillMaxWidth().testTag("media-conversion-card"),
         )
 
         DiagnosticsCard(
@@ -462,110 +467,7 @@ private fun ToggleSettingRow(
     }
 }
 
-@Composable
-private fun MediaConversionCard(
-    modePosition: Int,
-    resolutionPosition: Int,
-    brightness: Int,
-    contrast: Int,
-    dither: Boolean,
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    Card(modifier = Modifier.fillMaxWidth().testTag("media-conversion-card")) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text("ファイル変換", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                "現在の表示モード・解像度・明るさ・コントラスト・ディザで変換して保存します。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            ConversionActionButton(
-                iconRes = R.drawable.ic_photo_24,
-                label = "写真をPNGに変換",
-                tag = "convert-photo",
-                onClick = {
-                    launchMediaConversion(
-                        context,
-                        MediaConversionActivity.KIND_PHOTO,
-                        modePosition,
-                        resolutionPosition,
-                        brightness,
-                        contrast,
-                        dither,
-                    )
-                },
-            )
-            ConversionActionButton(
-                iconRes = R.drawable.ic_video_24,
-                label = "動画をMP4に変換",
-                tag = "convert-video",
-                onClick = {
-                    launchMediaConversion(
-                        context,
-                        MediaConversionActivity.KIND_VIDEO,
-                        modePosition,
-                        resolutionPosition,
-                        brightness,
-                        contrast,
-                        dither,
-                    )
-                },
-            )
-            ConversionActionButton(
-                iconRes = R.drawable.ic_3d_model_24,
-                label = "3Dモデルを変換",
-                tag = "convert-model",
-                onClick = {
-                    launchMediaConversion(
-                        context,
-                        MediaConversionActivity.KIND_MODEL,
-                        modePosition,
-                        resolutionPosition,
-                        brightness,
-                        contrast,
-                        dither,
-                    )
-                },
-            )
-
-            Text(
-                "3Dモデル対応: PLY / OBJ / glTF / GLB",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ConversionActionButton(
-    iconRes: Int,
-    label: String,
-    tag: String,
-    onClick: () -> Unit,
-) {
-    FilledTonalButton(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 52.dp)
-            .testTag(tag),
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(ButtonDefaults.IconSize),
-        )
-        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-        Text(label, modifier = Modifier.weight(1f))
-    }
-}
-
-private fun resolutionValueForPosition(resolutionPosition: Int): String {
+internal fun resolutionValueForPosition(resolutionPosition: Int): String {
     return when {
         resolutionPosition == 0 -> GameBoyFilter.RESOLUTION_GB
         resolutionPosition == 1 -> GameBoyFilter.RESOLUTION_GBC
@@ -579,32 +481,11 @@ private fun resolutionValueForPosition(resolutionPosition: Int): String {
     }
 }
 
-private fun launchMediaConversion(
-    context: Context,
-    kind: String,
-    modePosition: Int,
-    resolutionPosition: Int,
-    brightness: Int,
-    contrast: Int,
-    dither: Boolean,
-) {
-    val mode = when (modePosition) {
-        1 -> GameBoyFilter.MODE_GBC
-        2 -> GameBoyFilter.MODE_GBA
-        3 -> GameBoyFilter.MODE_DS
-        else -> GameBoyFilter.MODE_GB
-    }
-    val resolution = resolutionValueForPosition(resolutionPosition)
-    context.startActivity(
-        Intent(context, MediaConversionActivity::class.java).apply {
-            putExtra(MediaConversionActivity.EXTRA_KIND, kind)
-            putExtra(MediaConversionActivity.EXTRA_MODE, mode)
-            putExtra(MediaConversionActivity.EXTRA_RESOLUTION, resolution)
-            putExtra(MediaConversionActivity.EXTRA_BRIGHTNESS, brightness)
-            putExtra(MediaConversionActivity.EXTRA_CONTRAST, contrast)
-            putExtra(MediaConversionActivity.EXTRA_DITHER, dither)
-        },
-    )
+private fun modeValueForPosition(modePosition: Int): String = when (modePosition) {
+    1 -> GameBoyFilter.MODE_GBC
+    2 -> GameBoyFilter.MODE_GBA
+    3 -> GameBoyFilter.MODE_DS
+    else -> GameBoyFilter.MODE_GB
 }
 
 @Composable

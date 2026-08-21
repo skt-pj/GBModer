@@ -2,6 +2,8 @@ package com.sktpj.gbmoder
 
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -69,11 +71,13 @@ private fun VideoDiagnosticsScreen(
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
     var running by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
     var stage by remember { mutableStateOf("") }
     var sourceName by remember { mutableStateOf<String?>(null) }
     var result by remember { mutableStateOf<VideoPipelineDiagnostics.Result?>(null) }
+    var encoderMs by remember { mutableStateOf(0.0) }
     var error by remember { mutableStateOf<String?>(null) }
     var reportText by remember { mutableStateOf<String?>(null) }
     var logStatus by remember { mutableStateOf<String?>(null) }
@@ -112,12 +116,14 @@ private fun VideoDiagnosticsScreen(
         if (uri == null) return@rememberLauncherForActivityResult
         sourceName = queryDiagnosticDisplayName(context, uri) ?: uri.lastPathSegment
         result = null
+        encoderMs = 0.0
         error = null
         reportText = null
         logStatus = null
         running = true
         progress = 0
         stage = "metadata"
+        val selectedName = sourceName.orEmpty()
 
         Thread({
             try {
@@ -126,21 +132,38 @@ private fun VideoDiagnosticsScreen(
                     uri,
                     options,
                 ) { percent, currentStage ->
-                    runOnMainThread(context as ComponentActivity) {
-                        progress = percent
+                    mainHandler.post {
+                        progress = percent.coerceAtMost(90)
                         stage = currentStage
                     }
                 }
-                val report = buildDiagnosticReport(diagnosed, options, sourceName.orEmpty())
-                runOnMainThread(context as ComponentActivity) {
+                mainHandler.post {
+                    progress = 92
+                    stage = "encoder"
+                }
+                val measuredEncoderMs = runCatching {
+                    VideoEncoderDiagnostics.measure(
+                        diagnosed.targetWidth,
+                        diagnosed.targetHeight,
+                        diagnosed.converterNominalFps,
+                    )
+                }.getOrDefault(0.0)
+                val report = buildDiagnosticReport(
+                    diagnosed,
+                    measuredEncoderMs,
+                    options,
+                    selectedName,
+                )
+                mainHandler.post {
                     result = diagnosed
+                    encoderMs = measuredEncoderMs
                     reportText = report
                     running = false
                     progress = 100
                     stage = "done"
                 }
             } catch (failure: Throwable) {
-                runOnMainThread(context as ComponentActivity) {
+                mainHandler.post {
                     error = failure.message ?: failure.javaClass.simpleName
                     running = false
                 }
@@ -224,7 +247,7 @@ private fun VideoDiagnosticsScreen(
             }
 
             result?.let { diagnosed ->
-                DiagnosticResultCards(diagnosed)
+                DiagnosticResultCards(diagnosed, encoderMs)
 
                 Button(
                     onClick = {
@@ -270,7 +293,10 @@ private fun VideoDiagnosticsScreen(
 }
 
 @Composable
-private fun DiagnosticResultCards(result: VideoPipelineDiagnostics.Result) {
+private fun DiagnosticResultCards(
+    result: VideoPipelineDiagnostics.Result,
+    encoderMs: Double,
+) {
     OutlinedCard(modifier = Modifier.fillMaxWidth().testTag("diagnostic-result")) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -281,30 +307,15 @@ private fun DiagnosticResultCards(result: VideoPipelineDiagnostics.Result) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            DiagnosticLine(
-                stringResource(R.string.diag_source_size),
-                "${result.sourceWidth}×${result.sourceHeight}",
-            )
-            DiagnosticLine(
-                stringResource(R.string.diag_target_size),
-                "${result.targetWidth}×${result.targetHeight}",
-            )
-            DiagnosticLine(
-                stringResource(R.string.diag_source_pts_fps),
-                formatDouble(result.sourcePtsFps),
-            )
-            DiagnosticLine(
-                stringResource(R.string.diag_encoder_nominal_fps),
-                result.converterNominalFps.toString(),
-            )
+            DiagnosticLine(stringResource(R.string.diag_source_size), "${result.sourceWidth}×${result.sourceHeight}")
+            DiagnosticLine(stringResource(R.string.diag_target_size), "${result.targetWidth}×${result.targetHeight}")
+            DiagnosticLine(stringResource(R.string.diag_source_pts_fps), formatDouble(result.sourcePtsFps))
+            DiagnosticLine(stringResource(R.string.diag_encoder_nominal_fps), result.converterNominalFps.toString())
             DiagnosticLine(
                 stringResource(R.string.diag_vfr),
                 if (result.variableFrameRate) stringResource(R.string.diag_yes) else stringResource(R.string.diag_no),
             )
-            DiagnosticLine(
-                stringResource(R.string.diag_pts_jitter),
-                "${formatDouble(result.ptsJitterPercent)}%",
-            )
+            DiagnosticLine(stringResource(R.string.diag_pts_jitter), "${formatDouble(result.ptsJitterPercent)}%")
             MaterialText(
                 text = if (result.sourcePtsPreserved) {
                     stringResource(R.string.diag_pts_preserved)
@@ -327,10 +338,7 @@ private fun DiagnosticResultCards(result: VideoPipelineDiagnostics.Result) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            MaterialText(
-                text = stringResource(R.string.diag_full_path),
-                style = MaterialTheme.typography.titleSmall,
-            )
+            MaterialText(text = stringResource(R.string.diag_full_path), style = MaterialTheme.typography.titleSmall)
             TimingLines(
                 decode = result.fullDecodeMs,
                 resize = result.fullResizeMs,
@@ -350,19 +358,14 @@ private fun DiagnosticResultCards(result: VideoPipelineDiagnostics.Result) {
                 yuv = result.scaledYuvMs,
                 total = result.scaledTotalMs,
             )
-            DiagnosticLine(
-                stringResource(R.string.diag_speedup),
-                "×${formatDouble(result.targetFirstSpeedup)}",
-            )
+            DiagnosticLine(stringResource(R.string.diag_encode_ms), "${formatDouble(encoderMs)} ms")
+            DiagnosticLine(stringResource(R.string.diag_speedup), "×${formatDouble(result.targetFirstSpeedup)}")
             DiagnosticLine(
                 stringResource(R.string.diag_estimated_fps),
-                formatDouble(theoreticalFps(result.scaledTotalMs)),
+                formatDouble(theoreticalFps(result.scaledTotalMs + encoderMs)),
             )
             MaterialText(
-                text = stringResource(
-                    R.string.diag_dominant_stage,
-                    localizedStage(result.dominantCpuStage),
-                ),
+                text = stringResource(R.string.diag_dominant_stage, localizedStage(result.dominantCpuStage)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -381,22 +384,10 @@ private fun DiagnosticResultCards(result: VideoPipelineDiagnostics.Result) {
             )
             DiagnosticLine(stringResource(R.string.diag_decoder), result.decoderName.ifBlank { "-" })
             DiagnosticLine(stringResource(R.string.diag_encoder), result.encoderName.ifBlank { "-" })
-            DiagnosticLine(
-                stringResource(R.string.diag_decoder_hw),
-                yesNo(result.decoderHardwareAccelerated),
-            )
-            DiagnosticLine(
-                stringResource(R.string.diag_encoder_hw),
-                yesNo(result.encoderHardwareAccelerated),
-            )
-            DiagnosticLine(
-                stringResource(R.string.diag_surface_input),
-                yesNo(result.surfaceEncoderSupported),
-            )
-            DiagnosticLine(
-                stringResource(R.string.diag_gpu_candidate),
-                yesNo(result.gpuPipelineCandidate),
-            )
+            DiagnosticLine(stringResource(R.string.diag_decoder_hw), yesNo(result.decoderHardwareAccelerated))
+            DiagnosticLine(stringResource(R.string.diag_encoder_hw), yesNo(result.encoderHardwareAccelerated))
+            DiagnosticLine(stringResource(R.string.diag_surface_input), yesNo(result.surfaceEncoderSupported))
+            DiagnosticLine(stringResource(R.string.diag_gpu_candidate), yesNo(result.gpuPipelineCandidate))
             MaterialText(
                 text = if (result.gpuPipelineCandidate) {
                     stringResource(R.string.diag_gpu_path_available)
@@ -486,6 +477,7 @@ private fun localizedStage(stage: String): String = when (stage) {
     "codec-capabilities" -> stringResource(R.string.diag_stage_codec)
     "full-resolution-path" -> stringResource(R.string.diag_stage_full)
     "target-first-path" -> stringResource(R.string.diag_stage_target_first)
+    "encoder" -> stringResource(R.string.diag_stage_encoder)
     "resize" -> stringResource(R.string.diag_stage_resize)
     "filter" -> stringResource(R.string.diag_stage_filter)
     "yuv" -> stringResource(R.string.diag_stage_yuv)
@@ -499,6 +491,7 @@ private fun formatDouble(value: Double): String = String.format(Locale.US, "%.2f
 
 private fun buildDiagnosticReport(
     result: VideoPipelineDiagnostics.Result,
+    encoderMs: Double,
     options: MediaFileConverter.Options,
     sourceName: String,
 ): String = buildString {
@@ -510,6 +503,7 @@ private fun buildDiagnosticReport(
     appendLine("sourcePtsFps=${formatDouble(result.sourcePtsFps)} nominalEncoderFps=${result.converterNominalFps} variableFrameRate=${result.variableFrameRate} ptsJitterPercent=${formatDouble(result.ptsJitterPercent)} sourcePtsPreserved=${result.sourcePtsPreserved}")
     appendLine("full.decodeMs=${formatDouble(result.fullDecodeMs)} full.resizeMs=${formatDouble(result.fullResizeMs)} full.filterMs=${formatDouble(result.fullFilterMs)} full.yuvMs=${formatDouble(result.fullYuvMs)} full.totalMs=${formatDouble(result.fullTotalMs)}")
     appendLine("targetFirst.decodeMs=${formatDouble(result.scaledDecodeMs)} targetFirst.resizeMs=${formatDouble(result.scaledResizeMs)} targetFirst.filterMs=${formatDouble(result.scaledFilterMs)} targetFirst.yuvMs=${formatDouble(result.scaledYuvMs)} targetFirst.totalMs=${formatDouble(result.scaledTotalMs)} speedup=${formatDouble(result.targetFirstSpeedup)}")
+    appendLine("encoderMs=${formatDouble(encoderMs)} estimatedFps=${formatDouble(theoreticalFps(result.scaledTotalMs + encoderMs))}")
     appendLine("decoder=${result.decoderName} decoderHardware=${result.decoderHardwareAccelerated}")
     appendLine("encoder=${result.encoderName} encoderHardware=${result.encoderHardwareAccelerated} surfaceInput=${result.surfaceEncoderSupported}")
     appendLine("openGlEs2=${result.openGlEs2Supported} gpuPipelineCandidate=${result.gpuPipelineCandidate} gbcGlobalPalettePass=${result.gbcExactPaletteNeedsGlobalPass}")
@@ -530,7 +524,3 @@ private fun queryDiagnosticDisplayName(context: android.content.Context, uri: Ur
             if (index < 0) null else cursor.getString(index)
         }
     }.getOrNull()
-
-private fun runOnMainThread(activity: ComponentActivity, block: () -> Unit) {
-    activity.runOnUiThread(block)
-}

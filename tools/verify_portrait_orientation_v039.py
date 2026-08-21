@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.41", "version name")
-require("version.properties", "VERSION_CODE=42", "version code")
+require("version.properties", "VERSION_NAME=0.1.42", "version name")
+require("version.properties", "VERSION_CODE=43", "version code")
 require("tools/prepare_all_sources_v020.py", "finish_portrait_orientation_v039.py", "orientation finalizer registered")
 require("app/build.gradle", "finish_portrait_orientation_v039.py", "orientation finalizer tracked by Gradle")
 
@@ -49,4 +49,4 @@ require(unit, "zeroAndOneEightyRemainStable", "0/180 regression unit test")
 require(unit, "new float[]{1f, 0f, 1f, 1f, 0f, 0f, 0f, 1f}", "expected clockwise 90 corner order")
 require(unit, "new float[]{0f, 1f, 0f, 0f, 1f, 1f, 1f, 0f}", "expected clockwise 270 corner order")
 
-print("PORTRAIT VIDEO UPRIGHT ORIENTATION v0.1.41 AUTOMATED GATE: PASS")
+print("PORTRAIT VIDEO UPRIGHT ORIENTATION v0.1.42 AUTOMATED GATE: PASS")

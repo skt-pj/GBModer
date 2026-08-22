@@ -39,6 +39,7 @@ commands = [
     [sys.executable, str(repo / "tools/finish_console_frame_guard_v044.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_overlay_aspect_v046.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_fit_resolution_v047.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_fit_resolution_policy_v047.py"), str(generated_root)],
 ]
 
 for command in commands:

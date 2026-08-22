@@ -33,6 +33,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_resolution_default_v040.py'))
     inputs.file(rootProject.file('tools/finish_debug_features_v041.py'))
     inputs.file(rootProject.file('tools/finish_2048_content_v043.py'))
+    inputs.file(rootProject.file('tools/prepare_console_frame_v044.py'))
     inputs.file(rootProject.file('tools/finish_console_frame_v044.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',

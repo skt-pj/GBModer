@@ -71,7 +71,8 @@ reject(shortcut, "modifier = Modifier.fillMaxWidth(),", "menu no longer consumes
 
 menu = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
 require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n            LiveModeBillingManager.initialize(this)", "menu billing init debug-only")
-require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n        MenuEntry(\n            title = stringResource(R.string.menu_diagnostics_title)", "diagnostics menu debug-only")
+require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n        MenuEntry(\n            title = \"2048TD\"", "debug menu block starts with 2048TD")
+require(menu, "        )\n\n        MenuEntry(\n            title = stringResource(R.string.menu_diagnostics_title)", "diagnostics remains in debug-only menu block")
 require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n        HorizontalDivider()\n        MaterialText(\n            text = stringResource(R.string.live_mode_title)", "subscription menu debug-only")
 require(menu, "R.string.menu_description_v041", "release menu copy")
 require(menu, "R.string.menu_libraries_description_v041", "release libraries copy")

@@ -11,8 +11,8 @@ def require(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.43", "version name")
-require("version.properties", "VERSION_CODE=44", "version code")
+require("version.properties", "VERSION_NAME=0.1.44", "version name")
+require("version.properties", "VERSION_CODE=45", "version code")
 require("tools/prepare_billing_release_v041.py", "finish_debug_live_bypass_v042.py", "debug live bypass finalizer registered")
 
 billing = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/LiveModeBilling.kt"
@@ -30,4 +30,4 @@ require(main, "beginStartFlow();", "live start route retained")
 workflow = ".github/workflows/build-apk.yml"
 require(workflow, "-PGBMODER_DEBUG_FEATURES=true :app:assembleDebug", "internal APK enables debug features")
 
-print("DEBUG LIVE MODE v0.1.43 AUTOMATED GATE: PASS")
+print("DEBUG LIVE MODE v0.1.44 AUTOMATED GATE: PASS")

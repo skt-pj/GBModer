@@ -10,8 +10,8 @@ def require(condition: bool, message: str) -> None:
 
 
 version_text = (repo / "version.properties").read_text()
-require("VERSION_NAME=0.1.45" in version_text, "v0.1.45 versionName missing")
-require("VERSION_CODE=46" in version_text, "versionCode 46 missing")
+require("VERSION_NAME=0.1.46" in version_text, "v0.1.46 versionName missing")
+require("VERSION_CODE=47" in version_text, "versionCode 47 missing")
 
 build_text = (repo / "app/build.gradle").read_text()
 require("prepare2048Content" in build_text, "2048TD prepare task missing")
@@ -40,7 +40,14 @@ activity_text = (
 ).read_text()
 require("GameApp()" in activity_text, "2048TD GameApp is not hosted")
 require("startEmbeddedContentFilter" in activity_text, "embedded filter is not started")
-require("stopWindowFilter" in activity_text, "embedded filter is not stopped on exit")
+require("override fun onStop()" in activity_text, "embedded filter must stop when game leaves foreground")
+require("stopEmbeddedFilter()" in activity_text, "embedded filter stop helper missing")
+require("service.stopWindowFilter()" in activity_text, "embedded filter is not stopped on background")
+require("service.clearOverlay()" in activity_text, "embedded overlay is not cleared on background")
+require(
+    activity_text.find("override fun onStop()") < activity_text.find("override fun onDestroy()"),
+    "foreground lifecycle stop must not rely on destruction",
+)
 
 ui_path = repo / "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
 require(ui_path.exists(), "generated main UI is missing")
@@ -84,4 +91,4 @@ for values_dir in ("values", "values-ja", "values-zh-rCN", "values-ko"):
     require('name="playground_description_v045"' in value, f"{values_dir} playground description missing")
     require('name="playground_action_v045"' in value, f"{values_dir} playground action missing")
 
-print("v0.1.45 2048TD main-screen playground gate PASS")
+print("v0.1.46 2048TD foreground lifecycle gate PASS")

@@ -119,6 +119,36 @@ filter_text = replace_once(
 ''',
     "fit mode disables source crop",
 )
+filter_text = replace_once(
+    filter_text,
+    '''    public static int[] getCenterCropBoundsForTarget(
+            String resolution,
+            int sourceWidth,
+            int sourceHeight,
+            int targetWidth,
+            int targetHeight
+    ) {
+        int width = Math.max(1, sourceWidth);
+        int height = Math.max(1, sourceHeight);
+        if (!isFixedAspectResolution(resolution)) {
+            return new int[]{0, 0, width, height};
+        }
+''',
+    '''    public static int[] getCenterCropBoundsForTarget(
+            String resolution,
+            int sourceWidth,
+            int sourceHeight,
+            int targetWidth,
+            int targetHeight
+    ) {
+        int width = Math.max(1, sourceWidth);
+        int height = Math.max(1, sourceHeight);
+        if (isFitResolution(resolution) || !isFixedAspectResolution(resolution)) {
+            return new int[]{0, 0, width, height};
+        }
+''',
+    "fit mode disables portrait target crop",
+)
 filter_path.write_text(filter_text)
 
 
@@ -270,7 +300,7 @@ video = replace_once(
     '''            int displaySourceHeight = (rotation == 90 || rotation == 270)
                     ? sourceWidth
                     : sourceHeight;
-            int[] crop = GameBoyFilter.getCenterCropBounds(
+            int[] crop = GameBoyFilter.getCenterCropBoundsForTarget(
 ''',
     '''            int displaySourceHeight = (rotation == 90 || rotation == 270)
                     ? sourceWidth
@@ -286,7 +316,7 @@ video = replace_once(
             this.contentTop = destination[1];
             this.contentWidth = Math.max(1, destination[2] - destination[0]);
             this.contentHeight = Math.max(1, destination[3] - destination[1]);
-            int[] crop = GameBoyFilter.getCenterCropBounds(
+            int[] crop = GameBoyFilter.getCenterCropBoundsForTarget(
 ''',
     "GPU fit viewport geometry",
 )

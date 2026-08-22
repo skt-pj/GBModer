@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="resolution_fit_gb_v047">GB / 최대 160×144 (전체 맞춤)</string>
+    <string name="resolution_fit_gbc_v047">GBC / 최대 160×144 (전체 맞춤)</string>
+    <string name="resolution_fit_gba_v047">GBA / 최대 240×160 (전체 맞춤)</string>
+    <string name="resolution_fit_ds_v047">DS / 최대 256×192 (전체 맞춤)</string>
+</resources>

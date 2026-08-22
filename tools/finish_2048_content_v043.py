@@ -50,8 +50,15 @@ replace_once(
 )
 
 replace_once(
-    "        windowFilterRunning = false;\n        screenshotInFlight = false;\n",
-    "        windowFilterRunning = false;\n        allowOwnPackageWindow = false;\n        screenshotInFlight = false;\n",
+    '''    public void stopWindowFilter() {
+        windowFilterRunning = false;
+        screenshotInFlight = false;
+''',
+    '''    public void stopWindowFilter() {
+        windowFilterRunning = false;
+        allowOwnPackageWindow = false;
+        screenshotInFlight = false;
+''',
     "embedded-content stop reset",
 )
 

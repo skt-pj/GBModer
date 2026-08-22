@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="resolution_fit_gb_v047">GB / up to 160×144 (fit entire screen)</string>
+    <string name="resolution_fit_gbc_v047">GBC / up to 160×144 (fit entire screen)</string>
+    <string name="resolution_fit_gba_v047">GBA / up to 240×160 (fit entire screen)</string>
+    <string name="resolution_fit_ds_v047">DS / up to 256×192 (fit entire screen)</string>
+</resources>

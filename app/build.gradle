@@ -37,6 +37,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_console_frame_v044.py'))
     inputs.file(rootProject.file('tools/run_console_frame_v044.py'))
     inputs.file(rootProject.file('tools/finish_console_frame_guard_v044.py'))
+    inputs.file(rootProject.file('tools/finish_overlay_aspect_v046.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,

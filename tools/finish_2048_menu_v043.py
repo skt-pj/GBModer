@@ -9,8 +9,9 @@ root = Path(sys.argv[1]).resolve()
 path = root / "com/sktpj/gbmoder/AppMenuActivity.kt"
 text = path.read_text()
 
-old = '''    MenuEntry(
-        title = stringResource(R.string.menu_diagnostics_title),
+old = '''    if (BuildConfig.DEBUG_FEATURES) {
+        MenuEntry(
+            title = stringResource(R.string.menu_diagnostics_title),
 '''
 new = '''    if (BuildConfig.DEBUG_FEATURES) {
         MenuEntry(
@@ -29,10 +30,9 @@ new = '''    if (BuildConfig.DEBUG_FEATURES) {
                 )
             },
         )
-    }
 
-    MenuEntry(
-        title = stringResource(R.string.menu_diagnostics_title),
+        MenuEntry(
+            title = stringResource(R.string.menu_diagnostics_title),
 '''
 count = text.count(old)
 if count != 1:

@@ -14,8 +14,10 @@ def require(path: str, needle: str, label: str) -> None:
 require("version.properties", "VERSION_NAME=0.1.47", "version name")
 require("version.properties", "VERSION_CODE=48", "version code")
 require("tools/prepare_all_sources_v020.py", "finish_fit_resolution_v047.py", "Java fit finalizer registered")
+require("tools/prepare_all_sources_v020.py", "finish_fit_resolution_policy_v047.py", "fit policy finalizer registered")
 require("tools/prepare_billing_release_v041.py", "finish_fit_resolution_ui_v047.py", "UI fit finalizer registered")
 require("app/build.gradle", "finish_fit_resolution_v047.py", "Gradle tracks Java fit finalizer")
+require("app/build.gradle", "finish_fit_resolution_policy_v047.py", "Gradle tracks fit policy finalizer")
 require("app/build.gradle", "finish_fit_resolution_ui_v047.py", "Gradle tracks UI fit finalizer")
 
 game_filter = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/GameBoyFilter.java"
@@ -24,17 +26,21 @@ require(game_filter, 'RESOLUTION_GBC_FIT = "gbc_fit"', "GBC fit alias")
 require(game_filter, 'RESOLUTION_GBA_FIT = "gba_fit"', "GBA fit alias")
 require(game_filter, 'RESOLUTION_DS_FIT = "ds_fit"', "DS fit alias")
 require(game_filter, "public static boolean isFitResolution", "fit policy helper")
+require(game_filter, "public static String safeResolutionPolicy", "fit-aware resolution sanitizer")
 require(game_filter, "public static int[] getFitDestinationBounds", "fit destination geometry")
 require(game_filter, "isFitResolution(resolution) || !isFixedAspectResolution(resolution)", "fit mode keeps complete source")
 
 converter = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MediaFileConverter.java"
+require(converter, "this.resolution = GameBoyFilter.safeResolutionPolicy(resolution);", "conversion options retain fit policy")
 require(converter, "GameBoyFilter.getFitDestinationBounds(", "photo and CPU video fit inside")
 require(converter, "new Rect(destination[0], destination[1], destination[2], destination[3])", "CPU destination uses fit rectangle")
 
 capture = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterCaptureService.java"
+require(capture, "resolution = GameBoyFilter.safeResolutionPolicy(intent.getStringExtra(EXTRA_RESOLUTION));", "MediaProjection retains fit policy")
 require(capture, "GameBoyFilter.getFitDestinationBounds(", "MediaProjection fit inside")
 
 access = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterAccessibilityService.java"
+require(access, "windowFilterResolution = GameBoyFilter.safeResolutionPolicy(resolution);", "accessibility retains fit policy")
 require(access, "GameBoyFilter.getFitDestinationBounds(", "accessibility live fit inside")
 require(access, "ConsoleFrameRenderer.compose(sourceFrame, windowFilterResolution)", "fit screen stays inside handheld frame")
 
@@ -42,7 +48,7 @@ video = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/VideoGpuConverter
 require(video, "private final int contentWidth;", "GPU fit viewport state")
 require(video, "frameSpec.screenLeft + contentLeft", "GPU fit viewport horizontally centered")
 require(video, "outputHeight - frameSpec.screenTop - contentTop - contentHeight", "GPU fit viewport vertically centered")
-require(video, "GameBoyFilter.getCenterCropBounds(", "crop mode retained in GPU video")
+require(video, "GameBoyFilter.getCenterCropBoundsForTarget(", "crop mode retained in GPU video")
 
 main = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MainActivity.java"
 for position, constant in ((24, "RESOLUTION_GB_FIT"), (25, "RESOLUTION_GBC_FIT"), (26, "RESOLUTION_GBA_FIT"), (27, "RESOLUTION_DS_FIT")):

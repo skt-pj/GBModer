@@ -11,8 +11,8 @@ def require(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.42", "version name")
-require("version.properties", "VERSION_CODE=43", "version code")
+require("version.properties", "VERSION_NAME=0.1.43", "version name")
+require("version.properties", "VERSION_CODE=44", "version code")
 require("tools/prepare_all_sources_v020.py", "finish_resolution_default_v040.py", "GB-default Java finalizer registered")
 require("app/build.gradle", "finish_resolution_default_v040.py", "GB-default Java finalizer tracked")
 require("tools/prepare_billing_kotlin_v035.py", 'DEFAULT_RESOLUTION_POSITION = 0', "generated Compose defaults to GB")
@@ -39,4 +39,4 @@ for values_dir in ("values", "values-ja", "values-zh-rCN", "values-ko"):
     require(strings, 'name="phone_ratio_text_recommended_v041"', f"{values_dir} recommended resolution copy")
     require(strings, 'name="readable_text_description_v041"', f"{values_dir} text recommendation copy")
 
-print("GB DEFAULT + 20% TEXT RECOMMENDATION v0.1.42 AUTOMATED GATE: PASS")
+print("GB DEFAULT + 20% TEXT RECOMMENDATION v0.1.43 AUTOMATED GATE: PASS")

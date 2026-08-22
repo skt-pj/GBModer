@@ -35,7 +35,7 @@ commands = [
     [sys.executable, str(repo / "tools/finish_debug_features_v041.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_2048_content_v043.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/prepare_console_frame_v044.py"), str(generated_root)],
-    [sys.executable, str(repo / "tools/finish_console_frame_v044.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/run_console_frame_v044.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_console_frame_guard_v044.py"), str(generated_root)],
 ]
 

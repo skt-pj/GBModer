@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.43", "version name")
-require("version.properties", "VERSION_CODE=44", "version code")
+require("version.properties", "VERSION_NAME=0.1.44", "version name")
+require("version.properties", "VERSION_CODE=45", "version code")
 
 build = "app/build.gradle"
 require(build, "GBMODER_DEBUG_FEATURES", "explicit build-time debug flag")
@@ -104,4 +104,4 @@ workflow = ".github/workflows/build-apk.yml"
 require(workflow, "python3 tools/verify_release_debug_v041.py", "v041 release/debug gate in CI")
 require(workflow, "-PGBMODER_DEBUG_FEATURES=true", "CI builds debug-feature APK explicitly")
 
-print("RELEASE UI + DEBUG FEATURES v0.1.43 AUTOMATED GATE: PASS")
+print("RELEASE UI + DEBUG FEATURES v0.1.44 AUTOMATED GATE: PASS")

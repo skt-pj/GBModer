@@ -80,11 +80,11 @@ new_skip = '''                if ((!allowOwnPackageWindow && getPackageName().eq
                 }
 '''
 count = method_text.count(old_skip)
-if count != 1:
+if count != 2:
     raise SystemExit(
-        f"resolveActiveApplicationWindow own-package gate: expected exactly one match, got {count}"
+        f"resolveActiveApplicationWindow own-package gates: expected exactly two matches, got {count}"
     )
-method_text = method_text.replace(old_skip, new_skip, 1)
+method_text = method_text.replace(old_skip, new_skip, 2)
 text = text[:method_start] + method_text + text[method_end:]
 
 path.write_text(text)

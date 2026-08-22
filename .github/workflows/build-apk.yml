@@ -120,6 +120,10 @@ jobs:
             status=$?
           fi
           if [ "$status" = "0" ]; then
+            python3 tools/verify_console_frame_v044.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
             python3 tools/verify_unified_conversion_ui_v034.py
             status=$?
           fi

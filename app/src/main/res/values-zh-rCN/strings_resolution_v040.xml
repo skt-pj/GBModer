@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_ratio_text_recommended">设备比例 / 20%（文字显示推荐）</string>
+    <string name="readable_text_description_v040">识别屏幕文字，并在低分辨率下使用 8×8 字体重绘。显示文字时推荐使用设备比例 / 20%。</string>
+</resources>

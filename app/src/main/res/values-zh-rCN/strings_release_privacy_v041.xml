@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="privacy_network_body_v041">GBModer 不会将所选媒体或转换内容发送到开发者运营的服务器。</string>
+    <string name="privacy_retention_body_v041">转换后的文件仅保存在您选择的位置，并会保留到您自行删除。GBModer 已禁用 Android 应用备份。</string>
+</resources>

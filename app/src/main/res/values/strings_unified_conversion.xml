@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_section">Common</string>
+    <string name="filter_section">Filter</string>
+    <string name="conversion_section">Convert</string>
+    <string name="conversion_source_select">Select source file</string>
+    <string name="conversion_output_select">Select output destination</string>
+    <string name="conversion_output_folder_select">Select output folder</string>
+    <string name="conversion_run">Convert</string>
+    <string name="unsupported_file_type">Unsupported file type</string>
+    <string name="conversion_completed">Conversion complete</string>
+    <string name="conversion_complete_title">Conversion complete</string>
+    <string name="conversion_open_file">Open file</string>
+    <string name="conversion_open_unavailable">No installed app can open this file</string>
+    <string name="conversion_folder_permission_failed">Could not remember permission for the output folder</string>
+</resources>

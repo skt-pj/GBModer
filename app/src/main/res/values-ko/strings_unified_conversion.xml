@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_section">공통</string>
+    <string name="filter_section">필터</string>
+    <string name="conversion_section">변환</string>
+    <string name="conversion_source_select">대상 파일 선택</string>
+    <string name="conversion_output_select">출력 위치 선택</string>
+    <string name="conversion_output_folder_select">출력 폴더 선택</string>
+    <string name="conversion_run">변환</string>
+    <string name="unsupported_file_type">지원하지 않는 파일 형식입니다</string>
+    <string name="conversion_completed">변환 완료</string>
+    <string name="conversion_complete_title">변환 완료</string>
+    <string name="conversion_open_file">파일 열기</string>
+    <string name="conversion_open_unavailable">이 파일을 열 수 있는 앱이 없습니다</string>
+    <string name="conversion_folder_permission_failed">출력 폴더 권한을 저장할 수 없습니다</string>
+</resources>

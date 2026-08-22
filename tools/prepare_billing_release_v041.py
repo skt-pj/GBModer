@@ -17,7 +17,8 @@ for command in (
     [sys.executable, str(repo / "tools/finish_debug_live_bypass_v042.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_2048_menu_v043.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_2048_main_v045.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_fit_resolution_ui_v047.py"), str(generated_root)],
 ):
     subprocess.run(command, cwd=repo, check=True)
 
-print("billing/release Kotlin sources prepared through v0.1.45", flush=True)
+print("billing/release Kotlin sources prepared through v0.1.47", flush=True)

@@ -3,6 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
+def debugFeaturesEnabled = (project.findProperty('GBMODER_DEBUG_FEATURES') ?: 'false').toString().toBoolean()
+
 def generatedGpuSourceDir = file("$buildDir/generated/gbmoderGpu/java")
 def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.dir('src/main/java')
@@ -16,6 +18,28 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/run_japanese_font_source_v019.py'))
     inputs.file(rootProject.file('tools/finish_compose_ui_source_v020.py'))
     inputs.file(rootProject.file('tools/finish_startup_source_v021.py'))
+    inputs.file(rootProject.file('tools/finish_text_route_source_v022.py'))
+    inputs.file(rootProject.file('tools/finish_text_layout_source_v023.py'))
+    inputs.file(rootProject.file('tools/finish_text_scroll_sync_source_v024.py'))
+    inputs.file(rootProject.file('tools/finish_route_insets_source_v025.py'))
+    inputs.file(rootProject.file('tools/finish_compose_controls_source_v026.py'))
+    inputs.file(rootProject.file('tools/finish_icon_localization_source_v030.py'))
+    inputs.file(rootProject.file('tools/finish_video_pipeline_v031.py'))
+    inputs.file(rootProject.file('tools/finish_video_gpu_v032.py'))
+    inputs.file(rootProject.file('tools/finish_aspect_crop_v033.py'))
+    inputs.file(rootProject.file('tools/finish_billing_gate_v035.py'))
+    inputs.file(rootProject.file('tools/finish_portrait_video_v038.py'))
+    inputs.file(rootProject.file('tools/finish_portrait_orientation_v039.py'))
+    inputs.file(rootProject.file('tools/finish_resolution_default_v040.py'))
+    inputs.file(rootProject.file('tools/finish_debug_features_v041.py'))
+    inputs.file(rootProject.file('tools/finish_2048_content_v043.py'))
+    inputs.file(rootProject.file('tools/prepare_console_frame_v044.py'))
+    inputs.file(rootProject.file('tools/finish_console_frame_v044.py'))
+    inputs.file(rootProject.file('tools/run_console_frame_v044.py'))
+    inputs.file(rootProject.file('tools/finish_console_frame_guard_v044.py'))
+    inputs.file(rootProject.file('tools/finish_overlay_aspect_v046.py'))
+    inputs.file(rootProject.file('tools/finish_fit_resolution_v047.py'))
+    inputs.file(rootProject.file('tools/finish_fit_resolution_policy_v047.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,
@@ -23,40 +47,79 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
             generatedGpuSourceDir.absolutePath
 }
 
+def generatedBillingKotlinDir = file("$buildDir/generated/gbmoderBilling/kotlin")
+def prepareBillingKotlin = tasks.register('prepareBillingKotlin', Exec) {
+    inputs.dir('src/main/kotlin')
+    inputs.file(rootProject.file('tools/prepare_billing_kotlin_v035.py'))
+    inputs.file(rootProject.file('tools/prepare_billing_release_v041.py'))
+    inputs.file(rootProject.file('tools/finish_release_ui_v041.py'))
+    inputs.file(rootProject.file('tools/finish_release_polish_v041.py'))
+    inputs.file(rootProject.file('tools/finish_debug_live_bypass_v042.py'))
+    inputs.file(rootProject.file('tools/finish_2048_menu_v043.py'))
+    inputs.file(rootProject.file('tools/finish_2048_main_v045.py'))
+    inputs.file(rootProject.file('tools/finish_fit_resolution_ui_v047.py'))
+    outputs.dir(generatedBillingKotlinDir)
+    commandLine 'python3',
+            rootProject.file('tools/prepare_billing_release_v041.py').absolutePath,
+            file('src/main/kotlin').absolutePath,
+            generatedBillingKotlinDir.absolutePath
+}
+
+def generated2048SourceDir = file("$buildDir/generated/gbmoder2048/kotlin")
+def prepare2048Content = tasks.register('prepare2048Content', Exec) {
+    inputs.file(rootProject.file('tools/prepare_2048td_content_v043.py'))
+    inputs.property('upstreamCommit', '2fa62d4b636e3e403466256dc452bf72fe6fda42')
+    outputs.dir(generated2048SourceDir)
+    commandLine 'python3',
+            rootProject.file('tools/prepare_2048td_content_v043.py').absolutePath,
+            generated2048SourceDir.absolutePath
+}
+
 android {
     namespace 'com.sktpj.gbmoder'
     compileSdk 37
 
     signingConfigs {
-        devStable {
-            storeFile rootProject.file('ci/pointcloud-dev.jks')
-            storePassword 'pointclouddev'
-            keyAlias 'pointclouddev'
-            keyPassword 'pointclouddev'
+        commonStable {
+            storeFile rootProject.file('ci/skt-common-signing.jks')
+            storePassword '2048td-release'
+            keyAlias '2048td-release'
+            keyPassword '2048td-release'
         }
     }
 
     defaultConfig {
         applicationId 'com.sktpj.gbmoder'
         minSdk 26
-        targetSdk 35
+        targetSdk 36
         versionCode 1
         versionName '0.1.0'
+        buildConfigField 'boolean', 'DEBUG_FEATURES', debugFeaturesEnabled.toString()
+        manifestPlaceholders = [debugFeaturesEnabled: debugFeaturesEnabled.toString()]
     }
 
     buildFeatures {
         compose true
+        buildConfig true
     }
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.devStable
+            signingConfig signingConfigs.commonStable
+        }
+        release {
+            signingConfig signingConfigs.commonStable
+            minifyEnabled false
         }
     }
 
     sourceSets {
         main {
             java.srcDirs = [generatedGpuSourceDir]
+            kotlin.srcDirs = [generatedBillingKotlinDir]
+        }
+        debug {
+            kotlin.srcDir generated2048SourceDir
         }
     }
 
@@ -78,9 +141,11 @@ dependencies {
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-core'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.activity:activity-compose:1.13.0'
     implementation 'androidx.compose.material3.adaptive:adaptive:1.3.0'
+    implementation 'com.android.billingclient:billing:9.1.0'
 
     debugImplementation 'androidx.compose.ui:ui-tooling'
     testImplementation 'junit:junit:4.13.2'
@@ -89,5 +154,9 @@ dependencies {
 tasks.configureEach { task ->
     if (task.name == 'preBuild') {
         task.dependsOn prepareGpuSource
+        task.dependsOn prepareBillingKotlin
+    }
+    if (task.name == 'preDebugBuild') {
+        task.dependsOn prepare2048Content
     }
 }

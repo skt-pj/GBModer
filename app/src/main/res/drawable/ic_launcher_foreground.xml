@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 8-bit G mark kept fully inside Android's 66dp adaptive-icon safe zone. -->
+    <path
+        android:fillColor="#17351F"
+        android:pathData="M34,28 H74 V36 H42 V44 H34 Z M26,36 H42 V44 H34 V68 H42 V76 H34 C29.6,76 26,72.4 26,68 Z M34,68 H66 V60 H50 V52 H82 V76 H42 V68 Z" />
+    <path
+        android:fillColor="#17351F"
+        android:pathData="M74,28 H82 V44 H74 Z M66,76 H82 V68 H66 Z" />
+    <!-- Three pixels hint at palette reduction / pixel processing without adding tiny detail. -->
+    <path
+        android:fillColor="#4E6A36"
+        android:pathData="M45,39 H51 V45 H45 Z M54,39 H60 V45 H54 Z M63,39 H69 V45 H63 Z" />
+</vector>

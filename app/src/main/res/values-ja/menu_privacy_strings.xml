@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="menu_title">メニュー</string>
+    <string name="menu_description">診断、課金状態、使用ライブラリ、プライバシー、アプリ情報を確認できます。</string>
+    <string name="menu_diagnostics_title">診断</string>
+    <string name="menu_diagnostics_description">動画処理経路、コーデック、GPU対応、フレーム時刻を比較し、ログを出力します。</string>
+    <string name="menu_libraries_title">使用ライブラリ</string>
+    <string name="menu_libraries_description">GBModerで利用している主な実行時・Build・テスト用ライブラリを表示します。</string>
+    <string name="menu_privacy_title">プライバシーポリシー</string>
+    <string name="menu_privacy_description">画面内容、選択ファイル、診断情報、課金情報の扱いを確認します。</string>
+    <string name="menu_about_title">アプリ情報</string>
+    <string name="menu_version_format">バージョン %1$s</string>
+    <string name="menu_package_format">パッケージ %1$s</string>
+    <string name="menu_back">戻る</string>
+
+    <string name="libraries_page_description">バージョンは現在のアプリBuild設定に基づきます。実行時ライブラリとBuild・テスト専用を分けて表示します。</string>
+    <string name="library_scope_runtime">実行時に使用</string>
+    <string name="library_scope_build_test">Build・テスト専用</string>
+
+    <string name="privacy_policy_intro">skt-pjのGBModerは、画面やメディアの内容を主に端末内で処理します。このポリシーではアプリ内のデータ経路を説明します。</string>
+    <string name="privacy_section_data_access">データへのアクセス</string>
+    <string name="privacy_data_access_body">GBModerはユーザーアカウントを作成せず、広告SDKやアクセス解析SDKを組み込んでいません。ユーザーが明示的に開始した機能に必要なデータだけへアクセスします。</string>
+    <string name="privacy_section_accessibility">ユーザー補助サービス</string>
+    <string name="privacy_accessibility_body">ユーザーが有効にした場合、低解像度向け文字再描画と互換画面取得のため、ユーザー補助サービスが画面上の文字やウィンドウ内容を読み取ることがあります。内容は端末内で処理し、開発者が運営するサーバーへ送信しません。</string>
+    <string name="privacy_section_screen_capture">画面取得</string>
+    <string name="privacy_screen_capture_body">ライブフィルターでは、ユーザーが画面またはアプリ共有を許可した後にAndroid MediaProjectionを使用します。取得したフレームはフィルター処理のため端末内で使用し、開発者サーバーへアップロードしません。</string>
+    <string name="privacy_section_files">選択したメディアファイル</string>
+    <string name="privacy_files_body">写真・動画・対応3Dファイルは、Androidのドキュメント選択画面でユーザーが選んだ後だけ読み取ります。変換は端末内で行い、出力はユーザーが指定した保存先にだけ書き込みます。</string>
+    <string name="privacy_section_billing">Google Play課金</string>
+    <string name="privacy_billing_body">ライブモードの定期購入はGoogle Playが処理します。GBModerはライブモードの利用可否判定のため、Google Playから商品情報と購入・定期購入状態を取得します。カード番号などの決済認証情報を受け取ったり保存したりしません。</string>
+    <string name="privacy_section_diagnostics">診断・ログ</string>
+    <string name="privacy_diagnostics_body">性能情報と診断情報は端末内で生成します。レポートやログは、ユーザーがAndroidのドキュメント選択画面から明示的に出力した場合だけアプリ外へ保存されます。クラウド保存先を選んだ場合は、その保存先プロバイダが処理します。</string>
+    <string name="privacy_section_network">外部送信</string>
+    <string name="privacy_network_body">GBModerは独自の広告、アクセス解析、コンテンツアップロード用バックエンドを運営していません。定期購入の購入と状態確認に必要な通信はGoogle Play BillingがGoogle Playと行います。</string>
+    <string name="privacy_section_retention">保存と保持</string>
+    <string name="privacy_retention_body">ユーザーの画面内容やメディアを開発者サーバーに保持しません。端末内で作成した出力ファイルや書き出したログは、ユーザーが削除するまで指定保存先に残ります。GBModerではAndroidアプリバックアップを無効にしています。</string>
+    <string name="privacy_section_contact">問い合わせ</string>
+    <string name="privacy_contact_body">開発者: skt-pj / GBModer。プライバシーに関する質問や報告は、公開されているGBModerのGitHub Issuesから送信できます。</string>
+    <string name="privacy_last_updated">最終更新: 2026-08-21</string>
+
+    <string name="accessibility_disclosure_title">ユーザー補助サービスの利用</string>
+    <string name="accessibility_disclosure_body">GBModerは「文字を読みやすくする」機能と互換画面取得のため、Androidのユーザー補助サービスを使って画面上の文字やウィンドウ内容を読み取ります。読み取った内容はこれらの機能のため端末内だけで処理し、開発者が運営するサーバーへ送信しません。この許可をしなくても写真・動画・3D変換は利用できます。</string>
+    <string name="accessibility_disclosure_accept">同意して設定を開く</string>
+    <string name="accessibility_disclosure_decline">同意しない</string>
+</resources>

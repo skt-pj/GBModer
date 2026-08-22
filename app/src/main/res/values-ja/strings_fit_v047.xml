@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="resolution_fit_gb_v047">GB / 最大160×144（全体を収める）</string>
+    <string name="resolution_fit_gbc_v047">GBC / 最大160×144（全体を収める）</string>
+    <string name="resolution_fit_gba_v047">GBA / 最大240×160（全体を収める）</string>
+    <string name="resolution_fit_ds_v047">DS / 最大256×192（全体を収める）</string>
+</resources>

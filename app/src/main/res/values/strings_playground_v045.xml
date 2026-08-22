@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playground_label_v045">PLAYGROUND</string>
+    <string name="playground_description_v045">Try the current display settings on an interactive sample.</string>
+    <string name="playground_action_v045">Play with this filter</string>
+</resources>

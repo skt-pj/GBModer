@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_ratio_text_recommended_v041">端末比 / 20%（テキスト推奨）</string>
+    <string name="readable_text_description_v041">文字表示には端末比 / 20%を推奨します。</string>
+    <string name="menu_description_v041">使用ライブラリ、プライバシー、アプリ情報を確認できます。</string>
+    <string name="menu_libraries_description_v041">主な使用ライブラリとライセンスを表示します。</string>
+    <string name="menu_privacy_description_v041">データの取り扱いを確認します。</string>
+    <string name="libraries_page_description_v041">このアプリで使用している主なライブラリとライセンスです。</string>
+</resources>

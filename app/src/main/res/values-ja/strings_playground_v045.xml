@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playground_label_v045">PLAYGROUND</string>
+    <string name="playground_description_v045">現在の表示設定を、そのまま操作できるサンプルで試せます。</string>
+    <string name="playground_action_v045">このフィルターで遊ぶ</string>
+</resources>

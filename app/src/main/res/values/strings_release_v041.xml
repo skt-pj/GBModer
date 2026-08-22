@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_ratio_text_recommended_v041">Device ratio / 20% (text recommended)</string>
+    <string name="readable_text_description_v041">For text, Device ratio / 20% is recommended.</string>
+    <string name="menu_description_v041">View libraries, privacy, and app information.</string>
+    <string name="menu_libraries_description_v041">View key libraries and licenses used by GBModer.</string>
+    <string name="menu_privacy_description_v041">Review how GBModer handles data.</string>
+    <string name="libraries_page_description_v041">Key libraries and licenses used by this app.</string>
+</resources>

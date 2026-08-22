@@ -10,8 +10,8 @@ def require(condition: bool, message: str) -> None:
 
 
 version_text = (repo / "version.properties").read_text()
-require("VERSION_NAME=0.1.44" in version_text, "v0.1.44 versionName missing")
-require("VERSION_CODE=45" in version_text, "versionCode 45 missing")
+require("VERSION_NAME=0.1.45" in version_text, "v0.1.45 versionName missing")
+require("VERSION_CODE=46" in version_text, "versionCode 46 missing")
 
 build_text = (repo / "app/build.gradle").read_text()
 require("prepare2048Content" in build_text, "2048TD prepare task missing")
@@ -21,6 +21,7 @@ require(
     "2fa62d4b636e3e403466256dc452bf72fe6fda42" in build_text,
     "2048TD pinned commit missing from Gradle inputs",
 )
+require("finish_2048_main_v045.py" in build_text, "main-screen 2048TD finalizer is not tracked")
 
 prepare_text = (repo / "tools/prepare_2048td_content_v043.py").read_text()
 require(
@@ -41,11 +42,23 @@ require("GameApp()" in activity_text, "2048TD GameApp is not hosted")
 require("startEmbeddedContentFilter" in activity_text, "embedded filter is not started")
 require("stopWindowFilter" in activity_text, "embedded filter is not stopped on exit")
 
+ui_path = repo / "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
+require(ui_path.exists(), "generated main UI is missing")
+ui_text = ui_path.read_text()
+require('testTag("main-2048td-card")' in ui_text, "2048TD main-screen card missing")
+require("GameContentCard(" in ui_text, "2048TD main-screen composable missing")
+require("MaterialTheme.shapes.extraLarge" in ui_text, "2048TD card does not use expressive Material shape")
+require("R.string.playground_description_v045" in ui_text, "2048TD supporting-content copy missing")
+require("BuildConfig.DEBUG_FEATURES" in ui_text, "2048TD main-screen card is not debug-gated")
+require(
+    ui_text.find("GameContentCard(") < ui_text.find("SectionTitle(androidx.compose.ui.res.stringResource(R.string.live_mode_title))"),
+    "2048TD card must appear before secondary live/diagnostics content",
+)
+
 menu_path = repo / "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
 require(menu_path.exists(), "generated app menu is missing")
 menu_text = menu_path.read_text()
-require('tag = "menu-2048td"' in menu_text, "2048TD menu entry missing")
-require("BuildConfig.DEBUG_FEATURES" in menu_text, "2048TD menu entry is not debug-gated")
+require('tag = "menu-2048td"' not in menu_text, "2048TD should no longer be duplicated in overflow menu")
 
 filter_path = repo / "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterAccessibilityService.java"
 require(filter_path.exists(), "generated accessibility filter source is missing")
@@ -63,4 +76,12 @@ require(
     "standalone 2048TD MainActivity must not be embedded",
 )
 
-print("v0.1.44 2048TD filtered-content gate PASS")
+for values_dir in ("values", "values-ja", "values-zh-rCN", "values-ko"):
+    strings = repo / f"app/src/main/res/{values_dir}/strings_playground_v045.xml"
+    require(strings.exists(), f"{values_dir} playground strings missing")
+    value = strings.read_text()
+    require('name="playground_label_v045"' in value, f"{values_dir} playground label missing")
+    require('name="playground_description_v045"' in value, f"{values_dir} playground description missing")
+    require('name="playground_action_v045"' in value, f"{values_dir} playground action missing")
+
+print("v0.1.45 2048TD main-screen playground gate PASS")

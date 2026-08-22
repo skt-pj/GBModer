@@ -18,12 +18,14 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.44", "version name")
-require("version.properties", "VERSION_CODE=45", "version code")
+require("version.properties", "VERSION_NAME=0.1.46", "version name")
+require("version.properties", "VERSION_CODE=47", "version code")
 require("tools/prepare_all_sources_v020.py", "run_console_frame_v044.py", "console frame compatibility wrapper registered")
 require("tools/run_console_frame_v044.py", "finish_console_frame_v044.py", "console frame finalizer executed by wrapper")
+require("tools/prepare_all_sources_v020.py", "finish_overlay_aspect_v046.py", "overlay aspect finalizer registered after console frame")
 require("app/build.gradle", "run_console_frame_v044.py", "console frame wrapper tracked by Gradle")
 require("app/build.gradle", "finish_console_frame_v044.py", "console frame finalizer tracked by Gradle")
+require("app/build.gradle", "finish_overlay_aspect_v046.py", "overlay aspect finalizer tracked by Gradle")
 
 source = "app/src/main/java/com/sktpj/gbmoder/ConsoleFrameRenderer.java"
 require(source, "static boolean isFixedResolution", "fixed-resolution selector")
@@ -32,6 +34,7 @@ require(source, "RESOLUTION_GBC", "GBC frame")
 require(source, "RESOLUTION_GBA", "GBA frame")
 require(source, "RESOLUTION_DS", "DS frame")
 require(source, "static Bitmap compose", "bitmap frame composition")
+require(source, "static Rect fitCenterRect", "aspect-preserving fit helper")
 require(source, "drawVerticalBody", "vertical handheld body")
 require(source, "drawGbaBody", "GBA-style body")
 require(source, "drawDsBody", "DS-style clamshell body")
@@ -51,9 +54,16 @@ generated_access = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/Filter
 require(generated_access, "!ConsoleFrameRenderer.isFixedResolution(windowFilterResolution)", "fixed live presets use framed CPU route")
 require(generated_access, "ConsoleFrameRenderer.compose(sourceFrame, windowFilterResolution)", "accessibility live frame composition")
 require(generated_access, "final Bitmap frame = preparedFrame", "accessibility framed bitmap is lambda-safe")
+require(generated_access, "public void showFrame(Bitmap frame, boolean preserveAspect)", "overlay accepts explicit aspect policy")
+require(generated_access, "private boolean preserveFrameAspect = false", "overlay remembers aspect policy")
+require(generated_access, "ConsoleFrameRenderer.fitCenterRect(", "fixed handheld frame is fit-centered")
+require(generated_access, "ConsoleFrameRenderer.isFixedResolution(windowFilterResolution)", "accessibility fixed preset preserves frame aspect")
+require(generated_access, "new Rect(0, 0, getWidth(), getHeight())", "phone/native full-frame path retained")
 
 generated_capture = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterCaptureService.java"
 require(generated_capture, "ConsoleFrameRenderer.compose(lowResolutionBitmap, resolution)", "MediaProjection live frame composition")
+require(generated_capture, "ConsoleFrameRenderer.isFixedResolution(resolution)", "MediaProjection passes fixed-frame aspect policy")
+require(generated_capture, "service.showFrame(", "MediaProjection uses aspect-aware overlay API")
 
 generated_video = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/VideoGpuConverter.java"
 require(generated_video, "int outputWidth = consoleFrame ? frameSpec.outputWidth : targetWidth", "GPU framed encoder width")
@@ -72,4 +82,4 @@ require(test, "gbFrameKeepsExactScreenInsideBody", "GB frame geometry test")
 require(test, "gbaFrameSupportsPortraitVideoScreen", "portrait GBA frame test")
 require(test, "dsFrameCreatesClamshellSpace", "DS frame geometry test")
 
-print("FIXED RESOLUTION HANDHELD FRAME v0.1.44 AUTOMATED GATE: PASS")
+print("FIXED RESOLUTION HANDHELD FRAME v0.1.46 ASPECT GATE: PASS")

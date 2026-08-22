@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playground_label_v045">PLAYGROUND</string>
+    <string name="playground_description_v045">현재 표시 설정을 조작 가능한 샘플에서 바로 시험해 볼 수 있습니다.</string>
+    <string name="playground_action_v045">이 필터로 플레이</string>
+</resources>

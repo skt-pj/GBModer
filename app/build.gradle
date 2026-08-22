@@ -32,6 +32,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_portrait_orientation_v039.py'))
     inputs.file(rootProject.file('tools/finish_resolution_default_v040.py'))
     inputs.file(rootProject.file('tools/finish_debug_features_v041.py'))
+    inputs.file(rootProject.file('tools/finish_2048_content_v043.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,
@@ -46,11 +47,23 @@ def prepareBillingKotlin = tasks.register('prepareBillingKotlin', Exec) {
     inputs.file(rootProject.file('tools/prepare_billing_release_v041.py'))
     inputs.file(rootProject.file('tools/finish_release_ui_v041.py'))
     inputs.file(rootProject.file('tools/finish_release_polish_v041.py'))
+    inputs.file(rootProject.file('tools/finish_debug_live_bypass_v042.py'))
+    inputs.file(rootProject.file('tools/finish_2048_menu_v043.py'))
     outputs.dir(generatedBillingKotlinDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_billing_release_v041.py').absolutePath,
             file('src/main/kotlin').absolutePath,
             generatedBillingKotlinDir.absolutePath
+}
+
+def generated2048SourceDir = file("$buildDir/generated/gbmoder2048/kotlin")
+def prepare2048Content = tasks.register('prepare2048Content', Exec) {
+    inputs.file(rootProject.file('tools/prepare_2048td_content_v043.py'))
+    inputs.property('upstreamCommit', '2fa62d4b636e3e403466256dc452bf72fe6fda42')
+    outputs.dir(generated2048SourceDir)
+    commandLine 'python3',
+            rootProject.file('tools/prepare_2048td_content_v043.py').absolutePath,
+            generated2048SourceDir.absolutePath
 }
 
 android {
@@ -96,6 +109,9 @@ android {
             java.srcDirs = [generatedGpuSourceDir]
             kotlin.srcDirs = [generatedBillingKotlinDir]
         }
+        debug {
+            kotlin.srcDir generated2048SourceDir
+        }
     }
 
     compileOptions {
@@ -130,5 +146,8 @@ tasks.configureEach { task ->
     if (task.name == 'preBuild') {
         task.dependsOn prepareGpuSource
         task.dependsOn prepareBillingKotlin
+    }
+    if (task.name == 'preDebugBuild') {
+        task.dependsOn prepare2048Content
     }
 }

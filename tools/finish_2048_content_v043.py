@@ -62,18 +62,30 @@ replace_once(
     "embedded-content stop reset",
 )
 
-replace_once(
-    '''                if (getPackageName().equals(packageName) || SYSTEM_UI_PACKAGE.equals(packageName)) {
+method_start_marker = "    private TargetWindow resolveActiveApplicationWindow() {\n"
+method_end_marker = "\n    public void prepareProbe() {\n"
+method_start = text.find(method_start_marker)
+method_end = text.find(method_end_marker, method_start)
+if method_start < 0 or method_end < 0:
+    raise SystemExit("resolveActiveApplicationWindow method boundaries not found")
+
+method_text = text[method_start:method_end]
+old_skip = '''                if (getPackageName().equals(packageName) || SYSTEM_UI_PACKAGE.equals(packageName)) {
                     continue;
                 }
-''',
-    '''                if ((!allowOwnPackageWindow && getPackageName().equals(packageName))
+'''
+new_skip = '''                if ((!allowOwnPackageWindow && getPackageName().equals(packageName))
                         || SYSTEM_UI_PACKAGE.equals(packageName)) {
                     continue;
                 }
-''',
-    "allow own package only for embedded content",
-)
+'''
+count = method_text.count(old_skip)
+if count != 1:
+    raise SystemExit(
+        f"resolveActiveApplicationWindow own-package gate: expected exactly one match, got {count}"
+    )
+method_text = method_text.replace(old_skip, new_skip, 1)
+text = text[:method_start] + method_text + text[method_end:]
 
 path.write_text(text)
 print("v0.1.43 embedded 2048TD filter route prepared", flush=True)

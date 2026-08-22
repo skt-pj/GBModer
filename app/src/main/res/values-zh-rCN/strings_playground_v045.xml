@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playground_label_v045">PLAYGROUND</string>
+    <string name="playground_description_v045">用可交互示例直接体验当前显示设置。</string>
+    <string name="playground_action_v045">使用此滤镜游玩</string>
+</resources>

@@ -95,11 +95,25 @@ filter_text = replace_once(
 )
 filter_text = replace_once(
     filter_text,
-    '''        if (!isFixedAspectResolution(resolution)) {
+    '''    public static int[] getCenterCropBounds(
+            String resolution,
+            int sourceWidth,
+            int sourceHeight
+    ) {
+        int width = Math.max(1, sourceWidth);
+        int height = Math.max(1, sourceHeight);
+        if (!isFixedAspectResolution(resolution)) {
             return new int[]{0, 0, width, height};
         }
 ''',
-    '''        if (isFitResolution(resolution) || !isFixedAspectResolution(resolution)) {
+    '''    public static int[] getCenterCropBounds(
+            String resolution,
+            int sourceWidth,
+            int sourceHeight
+    ) {
+        int width = Math.max(1, sourceWidth);
+        int height = Math.max(1, sourceHeight);
+        if (isFitResolution(resolution) || !isFixedAspectResolution(resolution)) {
             return new int[]{0, 0, width, height};
         }
 ''',

@@ -20,7 +20,9 @@ def reject(path: str, needle: str, label: str) -> None:
 
 require("version.properties", "VERSION_NAME=0.1.44", "version name")
 require("version.properties", "VERSION_CODE=45", "version code")
-require("tools/prepare_all_sources_v020.py", "finish_console_frame_v044.py", "console frame finalizer registered")
+require("tools/prepare_all_sources_v020.py", "run_console_frame_v044.py", "console frame compatibility wrapper registered")
+require("tools/run_console_frame_v044.py", "finish_console_frame_v044.py", "console frame finalizer executed by wrapper")
+require("app/build.gradle", "run_console_frame_v044.py", "console frame wrapper tracked by Gradle")
 require("app/build.gradle", "finish_console_frame_v044.py", "console frame finalizer tracked by Gradle")
 
 source = "app/src/main/java/com/sktpj/gbmoder/ConsoleFrameRenderer.java"
@@ -34,7 +36,6 @@ require(source, "drawVerticalBody", "vertical handheld body")
 require(source, "drawGbaBody", "GBA-style body")
 require(source, "drawDsBody", "DS-style clamshell body")
 
-fixed_selector = (repo / source).read_text()
 reject(source, 'RESOLUTION_PHONE_20.equals(safe)', "phone ratio remains full-frame")
 reject(source, 'RESOLUTION_NATIVE.equals(safe)', "native remains full-frame")
 
@@ -48,7 +49,8 @@ require(generated_converter, "ConsoleFrameRenderer.compose(filtered, options.res
 
 generated_access = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterAccessibilityService.java"
 require(generated_access, "!ConsoleFrameRenderer.isFixedResolution(windowFilterResolution)", "fixed live presets use framed CPU route")
-require(generated_access, "ConsoleFrameRenderer.compose(frame, windowFilterResolution)", "accessibility live frame composition")
+require(generated_access, "ConsoleFrameRenderer.compose(sourceFrame, windowFilterResolution)", "accessibility live frame composition")
+require(generated_access, "final Bitmap frame = preparedFrame", "accessibility framed bitmap is lambda-safe")
 
 generated_capture = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterCaptureService.java"
 require(generated_capture, "ConsoleFrameRenderer.compose(lowResolutionBitmap, resolution)", "MediaProjection live frame composition")

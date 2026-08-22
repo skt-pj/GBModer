@@ -39,7 +39,7 @@ replace_once(
             int contrast,
             boolean dither
     ) {
-        startWindowFilter(mode, resolution, brightness, contrast, dither);
+        startWindowFilter(mode, resolution, brightness, contrast, dither, false);
         allowOwnPackageWindow = true;
         Log.i(TAG, "Embedded content filter enabled for own package");
     }

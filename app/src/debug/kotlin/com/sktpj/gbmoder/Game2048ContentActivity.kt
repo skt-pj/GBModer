@@ -81,6 +81,11 @@ class Game2048ContentActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        stopEmbeddedFilter()
+        super.onStop()
+    }
+
     private fun refreshServiceReady() {
         val ready = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
             FilterAccessibilityService.getInstance() != null
@@ -105,14 +110,19 @@ class Game2048ContentActivity : ComponentActivity() {
         filterStarted = true
     }
 
-    override fun onDestroy() {
-        if (filterStarted) {
-            FilterAccessibilityService.getInstance()?.let { service ->
-                service.stopWindowFilter()
-                service.clearOverlay()
-            }
-            filterStarted = false
+    private fun stopEmbeddedFilter() {
+        if (!filterStarted) {
+            return
         }
+        FilterAccessibilityService.getInstance()?.let { service ->
+            service.stopWindowFilter()
+            service.clearOverlay()
+        }
+        filterStarted = false
+    }
+
+    override fun onDestroy() {
+        stopEmbeddedFilter()
         super.onDestroy()
     }
 }

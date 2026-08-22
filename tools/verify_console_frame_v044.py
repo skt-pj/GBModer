@@ -73,7 +73,7 @@ require(generated_video, 'console_frame=" + consoleFrame', "GPU frame diagnostic
 require(generated_video, "drawConsoleBody();", "GPU draws hardware body")
 require(generated_video, "frameSpec.screenLeft", "GPU screen viewport uses frame geometry")
 require(generated_video, "GLES20.GL_SCISSOR_TEST", "GPU body stays on Surface path")
-require(generated_video, "outputHeight - frameSpec.screenTop - targetHeight", "GPU top-origin frame geometry mapped to GL viewport")
+require(generated_video, "outputHeight - frameSpec.screenTop - contentTop - contentHeight", "GPU top-origin fit geometry mapped to GL viewport")
 require(generated_video, "sourceFormat.setInteger(MediaFormat.KEY_ROTATION, 0)", "portrait rotation ownership preserved")
 require(generated_video, "VideoGpuConverter.mapDisplayUvForRotation", "upright rotation mapper preserved")
 

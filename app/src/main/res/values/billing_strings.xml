@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_mode_title">Live mode</string>
+    <string name="live_mode_status_active">Subscription active</string>
+    <string name="live_mode_status_pending">Purchase pending</string>
+    <string name="live_mode_status_loading">Checking subscription</string>
+    <string name="live_mode_status_free">Free plan</string>
+    <string name="live_mode_manage">Manage</string>
+    <string name="live_mode_active_description">Live filtering is available with your active subscription.</string>
+    <string name="live_mode_paid_description">Live filtering requires a monthly subscription (%1$s). File conversion and other features remain free.</string>
+    <string name="live_mode_price_from_play">price shown by Google Play</string>
+    <string name="live_mode_paywall_headline">Unlock Live mode</string>
+    <string name="live_mode_paywall_body">Use GBModer as a real-time screen filter. File conversion and all other non-live features remain free.</string>
+    <string name="live_mode_benefit_realtime">Real-time live filtering</string>
+    <string name="live_mode_other_free">Photo, video, 3D model conversion, settings, and diagnostics remain free.</string>
+    <string name="live_mode_monthly_price">%1$s / month</string>
+    <string name="live_mode_price_loading">Loading price from Google Play</string>
+    <string name="live_mode_auto_renew">Automatically renews monthly until cancelled.</string>
+    <string name="live_mode_cancel_info">You can cancel anytime from Google Play subscriptions. Cancellation takes effect after the current paid period.</string>
+    <string name="live_mode_pending_purchase">Your purchase is pending. Live mode will unlock after Google Play confirms payment.</string>
+    <string name="live_mode_subscribe">Start monthly plan</string>
+    <string name="live_mode_loading_purchase">Loading Google Play</string>
+    <string name="live_mode_not_now">Not now</string>
+    <string name="live_mode_purchase_unavailable">Google Play billing is not available yet. Check the Play Store connection and subscription product configuration.</string>
+</resources>

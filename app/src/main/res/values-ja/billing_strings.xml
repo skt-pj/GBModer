@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_mode_title">ライブモード</string>
+    <string name="live_mode_status_active">契約中</string>
+    <string name="live_mode_status_pending">購入処理中</string>
+    <string name="live_mode_status_loading">契約状態を確認中</string>
+    <string name="live_mode_status_free">無料プラン</string>
+    <string name="live_mode_manage">定期購入を管理</string>
+    <string name="live_mode_active_description">契約中のためライブフィルターを利用できます。</string>
+    <string name="live_mode_paid_description">ライブフィルターは月額定期購入（%1$s）が必要です。ファイル変換など他の機能は無料です。</string>
+    <string name="live_mode_price_from_play">Google Play表示価格</string>
+    <string name="live_mode_paywall_headline">ライブモードを利用する</string>
+    <string name="live_mode_paywall_body">GBModerをリアルタイムの画面フィルターとして利用できます。ファイル変換などライブ以外の機能は無料のままです。</string>
+    <string name="live_mode_benefit_realtime">リアルタイムのライブフィルター</string>
+    <string name="live_mode_other_free">写真・動画・3Dモデル変換、各種設定、診断機能は無料です。</string>
+    <string name="live_mode_monthly_price">月額 %1$s</string>
+    <string name="live_mode_price_loading">Google Playから価格を取得中</string>
+    <string name="live_mode_auto_renew">解約するまで毎月自動更新されます。</string>
+    <string name="live_mode_cancel_info">Google Playの定期購入からいつでも解約できます。解約後も現在の支払期間が終了するまでは利用できます。</string>
+    <string name="live_mode_pending_purchase">購入処理中です。Google Playで支払いが確定するとライブモードが利用可能になります。</string>
+    <string name="live_mode_subscribe">月額プランを開始</string>
+    <string name="live_mode_loading_purchase">Google Playを読み込み中</string>
+    <string name="live_mode_not_now">今はしない</string>
+    <string name="live_mode_purchase_unavailable">Google Play課金を利用できません。Play Store接続と定期購入商品の設定を確認してください。</string>
+</resources>

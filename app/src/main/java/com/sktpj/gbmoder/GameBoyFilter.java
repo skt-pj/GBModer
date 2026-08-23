@@ -15,6 +15,8 @@ public final class GameBoyFilter {
     public static final String RESOLUTION_GBC = "gbc";
     public static final String RESOLUTION_GBA = "gba";
     public static final String RESOLUTION_DS = "ds";
+    public static final String RESOLUTION_PHONE_PREFIX = "phone_";
+    public static final String RESOLUTION_PHONE_20 = "phone_20";
     public static final String RESOLUTION_PHONE_25 = "phone_25";
     public static final String RESOLUTION_PHONE_33 = "phone_33";
     public static final String RESOLUTION_PHONE_50 = "phone_50";
@@ -41,6 +43,16 @@ public final class GameBoyFilter {
     private GameBoyFilter() {
     }
 
+    public static String phoneResolution(int percent) {
+        if (percent == 100) {
+            return RESOLUTION_NATIVE;
+        }
+        if (percent >= 5 && percent <= 95 && percent % 5 == 0) {
+            return RESOLUTION_PHONE_PREFIX + percent;
+        }
+        return RESOLUTION_PHONE_20;
+    }
+
     public static String safeResolution(String requestedResolution) {
         if (RESOLUTION_GBC.equals(requestedResolution)) {
             return RESOLUTION_GBC;
@@ -51,23 +63,12 @@ public final class GameBoyFilter {
         if (RESOLUTION_DS.equals(requestedResolution)) {
             return RESOLUTION_DS;
         }
-        if (RESOLUTION_PHONE_25.equals(requestedResolution)) {
-            return RESOLUTION_PHONE_25;
-        }
-        if (RESOLUTION_PHONE_33.equals(requestedResolution)) {
-            return RESOLUTION_PHONE_33;
-        }
-        if (RESOLUTION_PHONE_50.equals(requestedResolution)) {
-            return RESOLUTION_PHONE_50;
-        }
-        if (RESOLUTION_PHONE_67.equals(requestedResolution)) {
-            return RESOLUTION_PHONE_67;
-        }
-        if (RESOLUTION_PHONE_75.equals(requestedResolution)) {
-            return RESOLUTION_PHONE_75;
-        }
         if (RESOLUTION_NATIVE.equals(requestedResolution)) {
             return RESOLUTION_NATIVE;
+        }
+        int phonePercent = getPhonePercent(requestedResolution);
+        if (phonePercent > 0) {
+            return RESOLUTION_PHONE_PREFIX + phonePercent;
         }
         return RESOLUTION_GB;
     }
@@ -109,12 +110,29 @@ public final class GameBoyFilter {
     }
 
     private static float getPhoneScale(String resolution) {
-        if (RESOLUTION_PHONE_25.equals(resolution)) return 0.25f;
-        if (RESOLUTION_PHONE_33.equals(resolution)) return 1.0f / 3.0f;
-        if (RESOLUTION_PHONE_50.equals(resolution)) return 0.50f;
-        if (RESOLUTION_PHONE_67.equals(resolution)) return 2.0f / 3.0f;
-        if (RESOLUTION_PHONE_75.equals(resolution)) return 0.75f;
-        return 0.0f;
+        int percent = getPhonePercent(resolution);
+        if (percent <= 0) {
+            return 0.0f;
+        }
+        return percent / 100.0f;
+    }
+
+    private static int getPhonePercent(String resolution) {
+        if (resolution == null || !resolution.startsWith(RESOLUTION_PHONE_PREFIX)) {
+            return -1;
+        }
+        try {
+            int percent = Integer.parseInt(resolution.substring(RESOLUTION_PHONE_PREFIX.length()));
+            if (percent >= 5 && percent <= 95 && percent % 5 == 0) {
+                return percent;
+            }
+            if (percent == 33 || percent == 67) {
+                return percent;
+            }
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+        return -1;
     }
 
     private static int scaledDimension(int sourceDimension, float scale) {

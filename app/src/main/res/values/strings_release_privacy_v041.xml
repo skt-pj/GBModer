@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="privacy_network_body_v041">GBModer does not send selected media or converted content to a developer-operated server.</string>
+    <string name="privacy_retention_body_v041">Converted files are stored only in the destination you choose and remain there until you delete them. Android app backup is disabled for GBModer.</string>
+</resources>

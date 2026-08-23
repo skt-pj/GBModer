@@ -39,20 +39,20 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -61,9 +61,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.currentWindowDpSize
 import kotlin.math.roundToInt
+
+private const val FIRST_PHONE_RESOLUTION_POSITION = 4
+private const val LAST_PHONE_RESOLUTION_POSITION = 22
+private const val NATIVE_RESOLUTION_POSITION = 23
+private const val DEFAULT_RESOLUTION_POSITION = 7
 
 interface GbModerUiActions {
     fun onStart(
@@ -72,6 +75,8 @@ interface GbModerUiActions {
         brightness: Int,
         contrast: Int,
         dither: Boolean,
+        captureRoutePosition: Int,
+        textRecognitionEnabled: Boolean,
     )
 
     fun onStop()
@@ -126,7 +131,7 @@ object GbModerComposeUi {
 }
 
 @Composable
-private fun GbModerTheme(activity: Activity, content: @Composable () -> Unit) {
+internal fun GbModerTheme(activity: Activity, content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val colorScheme = when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dark -> dynamicDarkColorScheme(activity)
@@ -137,21 +142,15 @@ private fun GbModerTheme(activity: Activity, content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = colorScheme, content = content)
 }
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 private fun GbModerScreen(state: GbModerUiState, actions: GbModerUiActions) {
-    val windowSize = currentWindowDpSize()
-    val expanded = windowSize.width >= 840.dp
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val expanded = with(density) { windowInfo.containerSize.width.toDp() } >= 840.dp
 
     Scaffold(
         modifier = Modifier.fillMaxSize().testTag("gbmoder-scaffold"),
         contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = {
-            TopAppBar(
-                title = { Text("GBModer", fontWeight = FontWeight.SemiBold) },
-                actions = { StatusPill(running = state.running) },
-            )
-        },
     ) { innerPadding ->
         if (expanded) {
             Row(
@@ -187,46 +186,31 @@ private fun GbModerScreen(state: GbModerUiState, actions: GbModerUiActions) {
 }
 
 @Composable
-private fun StatusPill(running: Boolean) {
-    Surface(
-        modifier = Modifier.padding(end = 12.dp).testTag("status-pill"),
-        shape = RoundedCornerShape(100.dp),
-        tonalElevation = 2.dp,
-    ) {
-        Text(
-            text = if (running) "実行中" else "停止中",
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-        )
-    }
-}
-
-@Composable
 private fun SettingsPane(
     state: GbModerUiState,
     actions: GbModerUiActions,
     modifier: Modifier = Modifier,
 ) {
     var modePosition by rememberSaveable { mutableStateOf(0) }
-    var resolutionPosition by rememberSaveable { mutableStateOf(0) }
+    var resolutionPosition by rememberSaveable { mutableStateOf(DEFAULT_RESOLUTION_POSITION) }
     var brightness by rememberSaveable { mutableStateOf(6f) }
     var contrast by rememberSaveable { mutableStateOf(122f) }
     var dither by rememberSaveable { mutableStateOf(true) }
+    var textRecognitionEnabled by rememberSaveable { mutableStateOf(false) }
+    var captureRoutePosition by rememberSaveable { mutableStateOf(0) }
     var detailsExpanded by rememberSaveable { mutableStateOf(false) }
     var resolutionMenuExpanded by remember { mutableStateOf(false) }
 
-    val resolutions = listOf(
-        "GB / 160×144",
-        "GBC / 160×144",
-        "GBA / 240×160",
-        "DS / 256×192",
-        "端末比 / 25%",
-        "端末比 / 33%",
-        "端末比 / 50%",
-        "端末比 / 67%",
-        "端末比 / 75%",
-        "スマホの元解像度",
-    )
+    val resolutions = buildList {
+        add("GB / 160×144")
+        add("GBC / 160×144")
+        add("GBA / 240×160")
+        add("DS / 256×192")
+        for (percent in 5..95 step 5) {
+            add("端末比 / ${percent}%")
+        }
+        add("スマホの元解像度 / 100%")
+    }
 
     Column(
         modifier = modifier
@@ -235,9 +219,13 @@ private fun SettingsPane(
             .testTag("settings-scroll"),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
+        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))
+
         if (!state.accessibilityReady) {
             FirstSetupCard(actions)
         }
+
+        SectionTitle("共通")
 
         SectionTitle("表示モード")
         val modes = listOf("GB", "GBC", "GBA", "DS")
@@ -279,7 +267,7 @@ private fun SettingsPane(
             }
         }
         Text(
-            "表示モードの色・階調処理と解像度の出力サイズを組み合わせて適用します。",
+            "端末比は5%刻みで選択できます。表示モードの色・階調処理と解像度の出力サイズを組み合わせて適用します。",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -300,32 +288,26 @@ private fun SettingsPane(
             tag = "contrast-slider",
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { dither = !dither }
-                .padding(vertical = 6.dp)
-                .semantics { contentDescription = "ディザ ${if (dither) "オン" else "オフ"}" }
-                .testTag("dither-row"),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("ディザ", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "階調境界をパターン化して見かけの階調を補います。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = dither, onCheckedChange = { dither = it })
-        }
-
-        DiagnosticsCard(
-            expanded = detailsExpanded,
-            onToggle = { detailsExpanded = !detailsExpanded },
-            onLogSync = actions::onLogSync,
-            onAdbGuide = actions::onAdbGuide,
+        ToggleSettingRow(
+            title = "ディザ",
+            description = "階調境界をパターン化して見かけの階調を補います。",
+            checked = dither,
+            onCheckedChange = { dither = it },
+            contentDescription = "ディザ",
+            tag = "dither-row",
         )
+
+        ToggleSettingRow(
+            title = "文字を読みやすくする",
+            description = "画面内の文字を認識し、低解像度向け8×8フォントで再描画します。GB / 160×144で有効です。",
+            checked = textRecognitionEnabled,
+            onCheckedChange = { textRecognitionEnabled = it },
+            contentDescription = "文字認識と8×8再描画",
+            tag = "text-recognition-row",
+        )
+
+        HorizontalDivider()
+        SectionTitle("フィルター")
 
         Button(
             onClick = {
@@ -338,6 +320,8 @@ private fun SettingsPane(
                         brightness.roundToInt(),
                         contrast.roundToInt(),
                         dither,
+                        captureRoutePosition,
+                        textRecognitionEnabled,
                     )
                 }
             },
@@ -368,6 +352,29 @@ private fun SettingsPane(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
+
+        HorizontalDivider()
+        SectionTitle("変換")
+
+        UnifiedConversionControls(
+            options = MediaFileConverter.Options(
+                modeValueForPosition(modePosition),
+                resolutionValueForPosition(resolutionPosition),
+                brightness.roundToInt(),
+                contrast.roundToInt(),
+                dither,
+            ),
+            modifier = Modifier.fillMaxWidth().testTag("media-conversion-card"),
+        )
+
+        DiagnosticsCard(
+            expanded = detailsExpanded,
+            onToggle = { detailsExpanded = !detailsExpanded },
+            captureRoutePosition = captureRoutePosition,
+            onCaptureRouteChange = { captureRoutePosition = it },
+            onLogSync = actions::onLogSync,
+            onAdbGuide = actions::onAdbGuide,
+        )
 
         Spacer(Modifier.height(12.dp))
     }
@@ -429,24 +436,87 @@ private fun ValueSlider(
 }
 
 @Composable
+private fun ToggleSettingRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    contentDescription: String,
+    tag: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 6.dp)
+            .semantics {
+                this.contentDescription = "$contentDescription ${if (checked) "オン" else "オフ"}"
+            }
+            .testTag(tag),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+internal fun resolutionValueForPosition(resolutionPosition: Int): String {
+    return when {
+        resolutionPosition == 0 -> GameBoyFilter.RESOLUTION_GB
+        resolutionPosition == 1 -> GameBoyFilter.RESOLUTION_GBC
+        resolutionPosition == 2 -> GameBoyFilter.RESOLUTION_GBA
+        resolutionPosition == 3 -> GameBoyFilter.RESOLUTION_DS
+        resolutionPosition in FIRST_PHONE_RESOLUTION_POSITION..LAST_PHONE_RESOLUTION_POSITION -> {
+            GameBoyFilter.phoneResolution((resolutionPosition - 3) * 5)
+        }
+        resolutionPosition == NATIVE_RESOLUTION_POSITION -> GameBoyFilter.RESOLUTION_NATIVE
+        else -> GameBoyFilter.phoneResolution(20)
+    }
+}
+
+private fun modeValueForPosition(modePosition: Int): String = when (modePosition) {
+    1 -> GameBoyFilter.MODE_GBC
+    2 -> GameBoyFilter.MODE_GBA
+    3 -> GameBoyFilter.MODE_DS
+    else -> GameBoyFilter.MODE_GB
+}
+
+@Composable
 private fun DiagnosticsCard(
     expanded: Boolean,
     onToggle: () -> Unit,
+    captureRoutePosition: Int,
+    onCaptureRouteChange: (Int) -> Unit,
     onLogSync: () -> Unit,
     onAdbGuide: () -> Unit,
 ) {
+    var routeMenuExpanded by remember { mutableStateOf(false) }
+    val routeLabels = listOf("標準（推奨）", "互換モード")
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
             .testTag("diagnostics-card"),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("詳細設定・診断", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "ログ同期・ADB手順・診断情報",
+                        "画面取得方式・ログ・ADB",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -454,6 +524,48 @@ private fun DiagnosticsCard(
                 Text(if (expanded) "⌃" else "⌄")
             }
             if (expanded) {
+                HorizontalDivider()
+
+                Text("画面取得方式", style = MaterialTheme.typography.titleSmall)
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { routeMenuExpanded = true },
+                        modifier = Modifier.fillMaxWidth().testTag("capture-route-selector"),
+                    ) {
+                        Text(routeLabels[captureRoutePosition], modifier = Modifier.weight(1f))
+                        Text("▾")
+                    }
+                    DropdownMenu(
+                        expanded = routeMenuExpanded,
+                        onDismissRequest = { routeMenuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("標準（推奨）") },
+                            onClick = {
+                                onCaptureRouteChange(0)
+                                routeMenuExpanded = false
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("互換モード（Android 14+）") },
+                            enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+                            onClick = {
+                                onCaptureRouteChange(1)
+                                routeMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+                Text(
+                    if (captureRoutePosition == 0) {
+                        "MediaProjectionを使用します。通常はこちらを使用してください。"
+                    } else {
+                        "Accessibility Windowを使用します。Android 14以降向けの互換モードです。"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 HorizontalDivider()
                 OutlinedButton(
                     onClick = onLogSync,
@@ -468,7 +580,7 @@ private fun DiagnosticsCard(
                     Text("ADB手順")
                 }
                 Text(
-                    "Android 14以降は『1つのアプリ』共有を使用します。画面全体を選ぶと自己キャプチャ検出で停止します。DRM / FLAG_SECUREで保護された画面は取得できません。",
+                    "画面共有では『1つのアプリ』を選択してください。画面全体を選ぶと自己キャプチャ検出で停止します。DRM / FLAG_SECUREで保護された画面は取得できません。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_section">通用</string>
+    <string name="filter_section">滤镜</string>
+    <string name="conversion_section">转换</string>
+    <string name="conversion_source_select">选择源文件</string>
+    <string name="conversion_output_select">选择输出位置</string>
+    <string name="conversion_output_folder_select">选择输出文件夹</string>
+    <string name="conversion_run">转换</string>
+    <string name="unsupported_file_type">不支持的文件类型</string>
+    <string name="conversion_completed">转换完成</string>
+    <string name="conversion_complete_title">转换完成</string>
+    <string name="conversion_open_file">打开文件</string>
+    <string name="conversion_open_unavailable">没有可打开此文件的应用</string>
+    <string name="conversion_folder_permission_failed">无法保存输出文件夹权限</string>
+</resources>

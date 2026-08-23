@@ -14,6 +14,8 @@ root_build = (ROOT / "build.gradle").read_text()
 app_build = (ROOT / "app/build.gradle").read_text()
 workflow = (ROOT / ".github/workflows/build-apk.yml").read_text()
 ui = (ROOT / "app/src/main/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt").read_text()
+generated_ui = (ROOT / "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt").read_text()
+filter_source = (ROOT / "app/src/main/java/com/sktpj/gbmoder/GameBoyFilter.java").read_text()
 generated = (ROOT / "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MainActivity.java").read_text()
 
 # Toolchain / current stable stack
@@ -27,12 +29,17 @@ require(app_build, "androidx.compose.material3.adaptive:adaptive:1.3.0", "BUILD-
 require(workflow, "gradle-version: '9.5.0'", "BUILD-003 Gradle 9.5.0")
 require(workflow, 'platforms;android-37.0', "BUILD-001 CI API 37.0")
 
-# Image-derived UI requirements
+# Current UI requirements
 require(ui, "Scaffold(", "UI-002 Scaffold")
 require(ui, ".verticalScroll(rememberScrollState())", "UI-003 scrollable settings")
 require(ui, "WindowInsets.safeDrawing", "UI-004 safe drawing insets")
-require(ui, "TopAppBar(", "UI-006 TopAppBar")
-require(ui, 'Text("GBModer"', "UI-006 title")
+if "TopAppBar(" in ui or 'Text("GBModer"' in ui:
+    raise SystemExit("FAIL UI-006: top app bar/title must not occupy the Pixel top area")
+print("PASS UI-006 no top app bar/title")
+if 'testTag("top-quiet-zone")' in generated_ui:
+    raise SystemExit("FAIL UI-007: compiled UI must not reserve a standalone top quiet-zone row")
+print("PASS UI-007 compact compiled top area")
+require(generated_ui, 'SectionTitle("表示モード", modifier = Modifier.weight(1f))', "UI-008 menu shares first settings row")
 require(ui, "SingleChoiceSegmentedButtonRow", "UI-010 segmented modes")
 for mode in ('"GB"', '"GBC"', '"GBA"', '"DS"'):
     require(ui, mode, f"UI-010 mode {mode}")
@@ -41,21 +48,26 @@ for resolution in (
     "GBC / 160×144",
     "GBA / 240×160",
     "DS / 256×192",
-    "端末比 / 25%",
-    "端末比 / 33%",
-    "端末比 / 50%",
-    "端末比 / 67%",
-    "端末比 / 75%",
-    "スマホの元解像度",
 ):
     require(ui, resolution, f"UI-012 resolution {resolution}")
+require(generated_ui, "DEFAULT_RESOLUTION_POSITION = 9", "UI-012 compiled default resolution is 30 percent")
+require(generated_ui, '端末比 / 30%（テキスト推奨）', "UI-012 30 percent text recommendation")
+require(ui, "for (percent in 5..95 step 5)", "UI-012 phone resolution increments by 5 percent")
+require(ui, 'add("端末比 / ${percent}%")', "UI-012 generated phone percentage labels")
+require(ui, 'add("スマホの元解像度 / 100%")', "UI-012 native 100 percent label")
+require(ui, "GameBoyFilter.phoneResolution((resolutionPosition - 3) * 5)", "UI-012 media conversion uses shared percentage mapping")
+require(filter_source, 'RESOLUTION_PHONE_20 = "phone_20"', "UI-012 filter 20 percent resolution remains selectable")
+require(filter_source, "percent >= 5 && percent <= 95 && percent % 5 == 0", "UI-012 filter accepts 5-percent steps")
+require(generated, "private int uiResolutionPosition = 9;", "UI-012 generated live default resolution is 30 percent")
+require(generated, "position >= 4 && position <= 22", "UI-012 generated mapping covers 5 to 95 percent")
+require(generated, "GameBoyFilter.phoneResolution((position - 3) * 5)", "UI-012 generated mapping uses shared percentage helper")
 require(ui, 'mutableStateOf(6f)', "UI-014 brightness initial 6")
 require(ui, 'mutableStateOf(122f)', "UI-016 contrast initial 122")
 require(ui, 'mutableStateOf(true)', "UI-018 dither initially on")
-require(ui, '"詳細設定・診断"', "UI-020 diagnostics collapsed section")
-require(ui, 'if (state.running) "停止" else "フィルター開始"', "UI-022/023 single primary action")
-require(ui, "currentWindowDpSize()", "UI-029/030 adaptive window size")
-require(ui, "windowSize.width >= 840.dp", "UI-030 expanded threshold")
+require(ui, '"詳細設定・診断"', "UI-020 diagnostics implementation retained")
+require(ui, 'if (state.running) "停止" else "フィルター開始"', "UI-022/023 live implementation retained")
+require(ui, "LocalWindowInfo.current", "UI-029/030 adaptive window info")
+require(ui, ">= 840.dp", "UI-030 expanded threshold")
 require(ui, '"GAME BOY"', "UI-031 preview")
 require(ui, '"GB (DMG) パレット"', "UI-032 DMG palette")
 require(ui, "dynamicDarkColorScheme", "UI-034/035 dark dynamic theme")

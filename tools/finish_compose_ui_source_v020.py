@@ -29,7 +29,7 @@ replace_once(
     "    private TextView statusText;\n"
     "    private GbModerUiState composeUiState;\n"
     "    private int uiModePosition = 0;\n"
-    "    private int uiResolutionPosition = 0;\n"
+    "    private int uiResolutionPosition = 7;\n"
     "    private int uiBrightness = 6;\n"
     "    private int uiContrast = 122;\n"
     "    private boolean uiDither = true;\n"
@@ -185,16 +185,15 @@ replace_once(
 
     private String getSelectedResolution() {
         int position = uiResolutionPosition;
+        if (position == 0) return GameBoyFilter.RESOLUTION_GB;
         if (position == 1) return GameBoyFilter.RESOLUTION_GBC;
         if (position == 2) return GameBoyFilter.RESOLUTION_GBA;
         if (position == 3) return GameBoyFilter.RESOLUTION_DS;
-        if (position == 4) return GameBoyFilter.RESOLUTION_PHONE_25;
-        if (position == 5) return GameBoyFilter.RESOLUTION_PHONE_33;
-        if (position == 6) return GameBoyFilter.RESOLUTION_PHONE_50;
-        if (position == 7) return GameBoyFilter.RESOLUTION_PHONE_67;
-        if (position == 8) return GameBoyFilter.RESOLUTION_PHONE_75;
-        if (position == 9) return GameBoyFilter.RESOLUTION_NATIVE;
-        return GameBoyFilter.RESOLUTION_GB;
+        if (position >= 4 && position <= 22) {
+            return GameBoyFilter.phoneResolution((position - 3) * 5);
+        }
+        if (position == 23) return GameBoyFilter.RESOLUTION_NATIVE;
+        return GameBoyFilter.RESOLUTION_PHONE_20;
     }
 
     private int getBrightness() {

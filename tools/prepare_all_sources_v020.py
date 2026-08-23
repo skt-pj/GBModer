@@ -19,10 +19,27 @@ commands = [
     [sys.executable, str(repo / "tools/run_japanese_font_source_v019.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_compose_ui_source_v020.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_startup_source_v021.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_text_route_source_v022.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_text_layout_source_v023.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_text_scroll_sync_source_v024.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_route_insets_source_v025.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_compose_controls_source_v026.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_icon_localization_source_v030.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_video_pipeline_v031.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_video_gpu_v032.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_aspect_crop_v033.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_billing_gate_v035.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_portrait_video_v038.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_portrait_orientation_v039.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_resolution_default_v040.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_debug_features_v041.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_2048_content_v043.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_2048_fit_v044.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_resolution_default_v045.py"), str(generated_root)],
 ]
 
 for command in commands:
     print("+", " ".join(command), flush=True)
     subprocess.run(command, cwd=repo, check=True)
 
-print("all generated sources prepared for v0.1.21", flush=True)
+print("all generated sources prepared through v0.1.45", flush=True)

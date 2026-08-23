@@ -98,7 +98,7 @@ new_embedded_start = r'''    public void startEmbeddedContentFilter(
             int contrast,
             boolean dither
     ) {
-        startWindowFilter(mode, resolution, brightness, contrast, dither);
+        startWindowFilter(mode, resolution, brightness, contrast, dither, false);
         allowOwnPackageWindow = true;
         embeddedContentFit = true;
         Log.i(TAG, "Embedded content filter enabled for own package layout=contain");

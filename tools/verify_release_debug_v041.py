@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.44", "version name")
-require("version.properties", "VERSION_CODE=45", "version code")
+require("version.properties", "VERSION_NAME=0.1.45", "version name")
+require("version.properties", "VERSION_CODE=46", "version code")
 
 build = "app/build.gradle"
 require(build, "GBMODER_DEBUG_FEATURES", "explicit build-time debug flag")
@@ -30,6 +30,7 @@ require(build, "prepare_billing_release_v041.py", "v041 Kotlin wrapper tracked")
 require(build, "finish_release_ui_v041.py", "v041 release UI finalizer tracked")
 require(build, "finish_release_polish_v041.py", "v041 release polish tracked")
 require(build, "finish_debug_features_v041.py", "v041 Java gate tracked")
+require(build, "finish_text_defaults_v045.py", "v045 text/default finalizer tracked")
 
 main_manifest = "app/src/main/AndroidManifest.xml"
 debug_manifest = "app/src/debug/AndroidManifest.xml"
@@ -53,14 +54,15 @@ require(debug_manifest, 'android:enabled="${debugFeaturesEnabled}"', "debug comp
 
 ui = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
 require(ui, "BuildConfig.DEBUG_FEATURES && !state.accessibilityReady", "accessibility setup debug-only")
-require(ui, "if (BuildConfig.DEBUG_FEATURES) {\n            ToggleSettingRow(", "readable-text control debug-only")
+reject(ui, 'tag = "text-recognition-row"', "readable-text control removed")
+reject(ui, 'title = "文字を読みやすくする"', "readable-text title removed")
+require(ui, 'add("端末比 / 30%（テキスト推奨）")', "30 percent text recommendation retained")
 require(ui, "SectionTitle(androidx.compose.ui.res.stringResource(R.string.live_mode_title))", "live section retained behind debug gate")
 require(ui, "if (BuildConfig.DEBUG_FEATURES) {\n            DiagnosticsCard(", "diagnostics card debug-only")
 require(ui, 'SectionTitle("表示モード", modifier = Modifier.weight(1f))', "menu shares display-mode row")
 require(ui, ".padding(horizontal = 20.dp, vertical = 8.dp)", "compact top content padding")
 require(ui, "Arrangement.spacedBy(14.dp)", "compact settings rhythm")
 require(ui, 'description = "",', "dither explanation removed")
-require(ui, '文字表示には端末比 / 20%を推奨します。', "concise text recommendation")
 reject(ui, 'testTag("top-quiet-zone")', "standalone top quiet-zone removed")
 reject(ui, "端末比は5%刻みで選択できます。表示モードの色・階調処理と解像度の出力サイズを組み合わせて適用します。", "resolution implementation explanation removed")
 reject(ui, 'SectionTitle("共通")', "redundant common heading removed")
@@ -92,17 +94,17 @@ require(main, "if (BuildConfig.DEBUG_FEATURES) {\n            LiveModeBillingMan
 
 for values_dir in ("values", "values-ja", "values-zh-rCN", "values-ko"):
     strings = f"app/src/main/res/{values_dir}/strings_release_v041.xml"
-    require(strings, 'name="phone_ratio_text_recommended_v041"', f"{values_dir} concise 20 percent copy")
-    require(strings, 'name="readable_text_description_v041"', f"{values_dir} concise text copy")
+    require(strings, 'name="phone_ratio_text_recommended_v041"', f"{values_dir} concise recommendation copy")
+    require(strings, "30%", f"{values_dir} recommendation is 30 percent")
     require(strings, 'name="menu_description_v041"', f"{values_dir} release menu copy")
     require(strings, 'name="menu_libraries_description_v041"', f"{values_dir} release libraries copy")
     require(strings, 'name="menu_privacy_description_v041"', f"{values_dir} release privacy copy")
     privacy_strings = f"app/src/main/res/{values_dir}/strings_release_privacy_v041.xml"
     require(privacy_strings, 'name="privacy_network_body_v041"', f"{values_dir} release network privacy copy")
-    require(privacy_strings, 'name="privacy_retention_body_v041"', f"{values_dir} release retention privacy copy")
+    require(privacy_strings, 'name="privacy_retention_body_v041"', f"{values_dir} release network retention copy")
 
 workflow = ".github/workflows/build-apk.yml"
 require(workflow, "python3 tools/verify_release_debug_v041.py", "v041 release/debug gate in CI")
 require(workflow, "-PGBMODER_DEBUG_FEATURES=true", "CI builds debug-feature APK explicitly")
 
-print("RELEASE UI + DEBUG FEATURES v0.1.44 AUTOMATED GATE: PASS")
+print("RELEASE UI + DEBUG FEATURES v0.1.45 AUTOMATED GATE: PASS")

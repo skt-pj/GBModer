@@ -70,8 +70,11 @@ require(ui, "LocalWindowInfo.current", "UI-029/030 adaptive window info")
 require(ui, ">= 840.dp", "UI-030 expanded threshold")
 require(ui, '"GAME BOY"', "UI-031 preview")
 require(ui, '"GB (DMG) パレット"', "UI-032 DMG palette")
-require(ui, "dynamicDarkColorScheme", "UI-034/035 dark dynamic theme")
-require(ui, "dynamicLightColorScheme", "UI-033/035 light dynamic theme")
+require(generated_ui, "androidx.compose.material3.lightColorScheme(", "UI-033 fixed light Game Boy theme")
+require(generated_ui, "background = Color(0xFFE2E6D6)", "UI-034 non-black Game Boy background")
+if "dynamicDarkColorScheme(activity)" in generated_ui:
+    raise SystemExit("FAIL UI-035: compiled UI must not switch to a black dynamic theme")
+print("PASS UI-035 compiled UI does not use dynamic dark theme")
 require(ui, ".semantics", "UI-037 accessibility semantics")
 
 # Java/Compose bridge and existing behavior connection

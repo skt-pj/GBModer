@@ -10,13 +10,14 @@ def require(condition: bool, message: str) -> None:
 
 
 version_text = (repo / "version.properties").read_text()
-require("VERSION_NAME=0.1.45" in version_text, "v0.1.45 versionName missing")
-require("VERSION_CODE=46" in version_text, "versionCode 46 missing")
+require("VERSION_NAME=0.1.46" in version_text, "v0.1.46 versionName missing")
+require("VERSION_CODE=47" in version_text, "versionCode 47 missing")
 
 build_text = (repo / "app/build.gradle").read_text()
 require("prepare2048Content" in build_text, "2048TD prepare task missing")
 require("generated2048SourceDir" in build_text, "2048TD generated source directory missing")
 require("finish_2048_fit_v044.py" in build_text, "2048TD contain-fit patch input missing")
+require("finish_ui_restore_v046.py" in build_text, "2048TD main-screen placement patch missing")
 require(
     "2fa62d4b636e3e403466256dc452bf72fe6fda42" in build_text,
     "2048TD pinned commit missing from Gradle inputs",
@@ -41,11 +42,18 @@ require("GameApp()" in activity_text, "2048TD GameApp is not hosted")
 require("startEmbeddedContentFilter" in activity_text, "embedded filter is not started")
 require("stopWindowFilter" in activity_text, "embedded filter is not stopped on exit")
 
+ui_path = repo / "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
+require(ui_path.exists(), "generated main UI is missing")
+ui_text = ui_path.read_text()
+require('testTag("main-2048td")' in ui_text, "2048TD main-screen action missing")
+require('SectionTitle("2048TD")' in ui_text, "2048TD main-screen section missing")
+require("BuildConfig.DEBUG_FEATURES" in ui_text, "2048TD main-screen action is not debug-gated")
+require('"com.sktpj.gbmoder.Game2048ContentActivity"' in ui_text, "2048TD main-screen route missing")
+
 menu_path = repo / "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
 require(menu_path.exists(), "generated app menu is missing")
 menu_text = menu_path.read_text()
-require('tag = "menu-2048td"' in menu_text, "2048TD menu entry missing")
-require("BuildConfig.DEBUG_FEATURES" in menu_text, "2048TD menu entry is not debug-gated")
+require('tag = "menu-2048td"' not in menu_text, "2048TD must not remain in overflow menu")
 
 filter_path = repo / "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterAccessibilityService.java"
 require(filter_path.exists(), "generated accessibility filter source is missing")
@@ -79,4 +87,4 @@ require(
     "standalone 2048TD MainActivity must not be embedded",
 )
 
-print("v0.1.45 2048TD contain-fit gate PASS")
+print("v0.1.46 2048TD contain-fit + main placement gate PASS")

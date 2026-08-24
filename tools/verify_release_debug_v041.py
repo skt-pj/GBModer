@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.45", "version name")
-require("version.properties", "VERSION_CODE=46", "version code")
+require("version.properties", "VERSION_NAME=0.1.46", "version name")
+require("version.properties", "VERSION_CODE=47", "version code")
 
 build = "app/build.gradle"
 require(build, "GBMODER_DEBUG_FEATURES", "explicit build-time debug flag")
@@ -31,6 +31,8 @@ require(build, "finish_release_ui_v041.py", "v041 release UI finalizer tracked")
 require(build, "finish_release_polish_v041.py", "v041 release polish tracked")
 require(build, "finish_debug_features_v041.py", "v041 Java gate tracked")
 require(build, "finish_text_defaults_v045.py", "v045 text/default finalizer tracked")
+require(build, "finish_ui_restore_v046.py", "v046 UI restore finalizer tracked")
+require(build, "finish_text_disabled_v046.py", "v046 text-disable finalizer tracked")
 
 main_manifest = "app/src/main/AndroidManifest.xml"
 debug_manifest = "app/src/debug/AndroidManifest.xml"
@@ -57,7 +59,11 @@ require(ui, "BuildConfig.DEBUG_FEATURES && !state.accessibilityReady", "accessib
 reject(ui, 'tag = "text-recognition-row"', "readable-text control removed")
 reject(ui, 'title = "文字を読みやすくする"', "readable-text title removed")
 require(ui, 'add("端末比 / 30%（テキスト推奨）")', "30 percent text recommendation retained")
+require(ui, "captureRoutePosition,\n                        false,", "text recognition disabled")
+require(ui, "androidx.compose.material3.lightColorScheme(", "non-black light Game Boy UI")
 require(ui, "SectionTitle(androidx.compose.ui.res.stringResource(R.string.live_mode_title))", "live section retained behind debug gate")
+require(ui, 'SectionTitle("2048TD")', "2048TD moved to main screen")
+require(ui, 'testTag("main-2048td")', "2048TD main-screen action")
 require(ui, "if (BuildConfig.DEBUG_FEATURES) {\n            DiagnosticsCard(", "diagnostics card debug-only")
 require(ui, 'SectionTitle("表示モード", modifier = Modifier.weight(1f))', "menu shares display-mode row")
 require(ui, ".padding(horizontal = 20.dp, vertical = 8.dp)", "compact top content padding")
@@ -73,8 +79,8 @@ reject(shortcut, "modifier = Modifier.fillMaxWidth(),", "menu no longer consumes
 
 menu = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
 require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n            LiveModeBillingManager.initialize(this)", "menu billing init debug-only")
-require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n        MenuEntry(\n            title = \"2048TD\"", "debug menu block starts with 2048TD")
-require(menu, "        )\n\n        MenuEntry(\n            title = stringResource(R.string.menu_diagnostics_title)", "diagnostics remains in debug-only menu block")
+reject(menu, 'tag = "menu-2048td"', "2048TD removed from overflow menu")
+require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n        MenuEntry(\n            title = stringResource(R.string.menu_diagnostics_title)", "diagnostics remains in debug-only menu block")
 require(menu, "if (BuildConfig.DEBUG_FEATURES) {\n        HorizontalDivider()\n        MaterialText(\n            text = stringResource(R.string.live_mode_title)", "subscription menu debug-only")
 require(menu, "R.string.menu_description_v041", "release menu copy")
 require(menu, "R.string.menu_libraries_description_v041", "release libraries copy")
@@ -91,6 +97,7 @@ main = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MainActivity.java"
 require(main, "if (BuildConfig.DEBUG_FEATURES) {\n            LiveModeBillingManager.initialize(this);", "main billing init debug-only")
 require(main, "if (!BuildConfig.DEBUG_FEATURES) {", "defensive live start gate")
 require(main, "if (BuildConfig.DEBUG_FEATURES) {\n            LiveModeBillingManager.refreshEntitlement();", "main billing refresh debug-only")
+require(main, "private boolean isUiTextRecognitionEnabled() {\n        return false;\n    }", "live text recognition hard-disabled")
 
 for values_dir in ("values", "values-ja", "values-zh-rCN", "values-ko"):
     strings = f"app/src/main/res/{values_dir}/strings_release_v041.xml"
@@ -107,4 +114,4 @@ workflow = ".github/workflows/build-apk.yml"
 require(workflow, "python3 tools/verify_release_debug_v041.py", "v041 release/debug gate in CI")
 require(workflow, "-PGBMODER_DEBUG_FEATURES=true", "CI builds debug-feature APK explicitly")
 
-print("RELEASE UI + DEBUG FEATURES v0.1.45 AUTOMATED GATE: PASS")
+print("RELEASE UI + DEBUG FEATURES v0.1.46 AUTOMATED GATE: PASS")

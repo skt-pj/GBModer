@@ -120,7 +120,7 @@ jobs:
             status=$?
           fi
           if [ "$status" = "0" ]; then
-            python3 tools/verify_text_defaults_v045.py
+            python3 tools/verify_ui_restore_v046.py
             status=$?
           fi
           if [ "$status" = "0" ]; then

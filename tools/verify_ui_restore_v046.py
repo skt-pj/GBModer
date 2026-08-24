@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+repo = Path(__file__).resolve().parents[1]
+
+
+def read(path: str) -> str:
+    return (repo / path).read_text()
+
+
+def require(path: str, needle: str, label: str) -> None:
+    text = read(path)
+    if needle not in text:
+        raise SystemExit(f"FAIL {label}: missing {needle!r} in {path}")
+    print(f"PASS {label}")
+
+
+def reject(path: str, needle: str, label: str) -> None:
+    text = read(path)
+    if needle in text:
+        raise SystemExit(f"FAIL {label}: unexpected {needle!r} in {path}")
+    print(f"PASS {label}")
+
+
+require("version.properties", "VERSION_NAME=0.1.46", "version name")
+require("version.properties", "VERSION_CODE=47", "version code")
+require("tools/prepare_billing_release_v041.py", "finish_ui_restore_v046.py", "v046 Kotlin finalizer registered")
+require("tools/prepare_all_sources_v020.py", "finish_text_disabled_v046.py", "v046 Java finalizer registered")
+require("app/build.gradle", "finish_ui_restore_v046.py", "v046 Kotlin finalizer tracked")
+require("app/build.gradle", "finish_text_disabled_v046.py", "v046 Java finalizer tracked")
+
+ui = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
+require(ui, "private const val DEFAULT_RESOLUTION_POSITION = 9", "default resolution remains device ratio 30 percent")
+require(ui, 'add("端末比 / 30%（テキスト推奨）")', "30 percent recommendation retained")
+require(ui, "captureRoutePosition,\n                        false,", "Compose always passes text recognition OFF")
+reject(ui, "captureRoutePosition,\n                        true,", "Compose no longer forces text recognition ON")
+reject(ui, 'tag = "text-recognition-row"', "readable-text toggle removed")
+reject(ui, 'title = "文字を読みやすくする"', "readable-text title removed")
+
+require(ui, "androidx.compose.material3.lightColorScheme(", "stable light Game Boy theme")
+require(ui, "background = Color(0xFFE2E6D6)", "non-black Game Boy background")
+require(ui, "surface = Color(0xFFF2F4E8)", "light Game Boy surface")
+reject(ui, "dynamicDarkColorScheme(activity)", "dynamic black theme disabled")
+
+require(ui, 'SectionTitle("2048TD")', "2048TD section on main screen")
+require(ui, 'testTag("main-2048td")', "2048TD main-screen action")
+require(ui, '"com.sktpj.gbmoder.Game2048ContentActivity"', "2048TD main-screen route")
+ui_text = read(ui)
+live_index = ui_text.find("SectionTitle(androidx.compose.ui.res.stringResource(R.string.live_mode_title))")
+conversion_index = ui_text.find('SectionTitle("変換")')
+game_index = ui_text.find('SectionTitle("2048TD")')
+if not (0 <= live_index < conversion_index < game_index):
+    raise SystemExit(
+        f"FAIL main section order: live={live_index} conversion={conversion_index} 2048={game_index}"
+    )
+print("PASS main section order is live -> conversion -> 2048TD")
+
+menu = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
+reject(menu, 'tag = "menu-2048td"', "2048TD removed from overflow menu")
+require(menu, 'tag = "menu-diagnostics"', "diagnostics menu item retained")
+
+main = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MainActivity.java"
+require(main, "uiTextRecognitionEnabled = false;", "Java ignores attempts to enable text recognition")
+require(main, "private boolean isUiTextRecognitionEnabled() {\n        return false;\n    }", "live routes hard-disable text recognition")
+require(main, "private int uiResolutionPosition = 9;", "live default remains device ratio 30 percent")
+
+accessibility = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterAccessibilityService.java"
+require(accessibility, "&& !windowTextRecognitionEnabled", "GPU route is available when text recognition is off")
+
+workflow = ".github/workflows/build-apk.yml"
+require(workflow, "python3 tools/verify_ui_restore_v046.py", "v046 UI restore gate in CI")
+
+print("UI RESTORE + TEXT DISABLED v0.1.46 AUTOMATED GATE: PASS")

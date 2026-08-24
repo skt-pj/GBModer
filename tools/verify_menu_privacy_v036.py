@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.45", "version name")
-require("version.properties", "VERSION_CODE=46", "version code")
+require("version.properties", "VERSION_NAME=0.1.46", "version name")
+require("version.properties", "VERSION_CODE=47", "version code")
 require("app/src/main/AndroidManifest.xml", '.AppMenuActivity', "menu activity registered")
 
 menu = "app/src/main/kotlin/com/sktpj/gbmoder/AppMenuActivity.kt"
@@ -67,4 +67,4 @@ accessibility = "app/src/main/res/xml/accessibility_service_config.xml"
 require(accessibility, 'android:canRetrieveWindowContent="true"', "declared accessibility data access")
 reject(accessibility, 'android:isAccessibilityTool="true"', "app does not self-designate as accessibility tool")
 
-print("MENU + PRIVACY + ACCESSIBILITY DISCLOSURE v0.1.45 AUTOMATED GATE: PASS")
+print("MENU + PRIVACY + ACCESSIBILITY DISCLOSURE v0.1.46 AUTOMATED GATE: PASS")

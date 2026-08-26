@@ -27,20 +27,17 @@ if "routeControls.post(routeControls::requestApplyInsets);" in main:
 print("PASS external route inset layer removed")
 
 need(main, "int captureRoutePosition,", "route value passed from Compose")
-need(main, "boolean textRecognitionEnabled", "text recognition compatibility argument retained")
+need(main, "boolean textRecognitionEnabled", "text recognition value passed from Compose")
 need(main, "uiCaptureRoutePosition = captureRoutePosition;", "route state applied at start")
-need(main, "uiTextRecognitionEnabled = false;", "text recognition forced off at start")
-need(main, "private boolean isUiTextRecognitionEnabled() {\n        return false;\n    }", "text recognition stays disabled")
+need(main, "uiTextRecognitionEnabled = false;", "text recognition hard-disabled at start")
 
 if compose.count(".verticalScroll(rememberScrollState())") != 1:
     raise SystemExit("FAIL settings must have exactly one vertical scroll container")
 print("PASS one settings scroll container")
 
-# The legacy source still defines the control because generated release/debug UI finalizers
-# remove it. Verify the rest of the v0.1.26 layout contract here; compiled removal is
-# enforced by verify_ui_restore_v046.py.
-need(compose, 'title = "文字を読みやすくする"', "legacy text recognition source retained for generator compatibility")
-need(compose, 'tag = "text-recognition-row"', "legacy text recognition tag retained for generator compatibility")
+if 'title = "文字を読みやすくする"' in compose or 'tag = "text-recognition-row"' in compose:
+    raise SystemExit("FAIL readable-text control remains in source UI")
+print("PASS readable-text control removed from source UI")
 need(compose, 'Text("詳細設定・診断"', "advanced section")
 need(compose, 'Text("画面取得方式"', "capture route inside advanced section")
 need(compose, 'testTag("capture-route-selector")', "capture route selector test tag")
@@ -57,4 +54,4 @@ if "処理ルート" in compose:
     raise SystemExit("FAIL implementation-centric route label exposed in normal UI")
 print("PASS implementation-centric top label removed")
 
-print("UIUX v0.1.46 AUTOMATED GATE: PASS")
+print("UIUX v0.1.47 AUTOMATED GATE: PASS")

@@ -10,8 +10,8 @@ def require(condition: bool, message: str) -> None:
 
 
 version_text = (repo / "version.properties").read_text()
-require("VERSION_NAME=0.1.46" in version_text, "v0.1.46 versionName missing")
-require("VERSION_CODE=47" in version_text, "versionCode 47 missing")
+require("VERSION_NAME=0.1.47" in version_text, "v0.1.47 versionName missing")
+require("VERSION_CODE=48" in version_text, "versionCode 48 missing")
 
 build_text = (repo / "app/build.gradle").read_text()
 require("prepare2048Content" in build_text, "2048TD prepare task missing")
@@ -87,4 +87,4 @@ require(
     "standalone 2048TD MainActivity must not be embedded",
 )
 
-print("v0.1.46 2048TD contain-fit + main placement gate PASS")
+print("v0.1.47 2048TD contain-fit + main placement gate PASS")

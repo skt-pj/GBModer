@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.46", "version name")
-require("version.properties", "VERSION_CODE=47", "version code")
+require("version.properties", "VERSION_NAME=0.1.47", "version name")
+require("version.properties", "VERSION_CODE=48", "version code")
 require("tools/prepare_all_sources_v020.py", "finish_portrait_video_v038.py", "portrait finalizer registered")
 require("app/build.gradle", "finish_portrait_video_v038.py", "portrait finalizer tracked by Gradle")
 
@@ -60,4 +60,4 @@ reject(
     "portrait GPU target no longer uses un-oriented fixed dimensions",
 )
 
-print("PORTRAIT VIDEO ASPECT v0.1.46 AUTOMATED GATE: PASS")
+print("PORTRAIT VIDEO ASPECT v0.1.47 AUTOMATED GATE: PASS")

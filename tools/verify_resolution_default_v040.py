@@ -11,8 +11,8 @@ def require(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.46", "version name")
-require("version.properties", "VERSION_CODE=47", "version code")
+require("version.properties", "VERSION_NAME=0.1.47", "version name")
+require("version.properties", "VERSION_CODE=48", "version code")
 require("tools/prepare_all_sources_v020.py", "finish_resolution_default_v040.py", "legacy resolution finalizer registered")
 require("tools/prepare_all_sources_v020.py", "finish_resolution_default_v045.py", "30-percent Java finalizer registered")
 require("tools/prepare_billing_release_v041.py", "finish_text_defaults_v045.py", "30-percent Kotlin finalizer registered")
@@ -37,4 +37,4 @@ for values_dir in ("values", "values-ja", "values-zh-rCN", "values-ko"):
     require(strings, 'name="phone_ratio_text_recommended_v041"', f"{values_dir} recommended resolution copy")
     require(strings, "30%", f"{values_dir} recommendation is 30 percent")
 
-print("30% DEFAULT + TEXT RECOMMENDATION v0.1.46 AUTOMATED GATE: PASS")
+print("30% DEFAULT + TEXT RECOMMENDATION v0.1.47 AUTOMATED GATE: PASS")

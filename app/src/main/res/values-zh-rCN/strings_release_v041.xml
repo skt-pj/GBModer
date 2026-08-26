@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_ratio_text_recommended_v041">设备比例 / 30%（文字推荐）</string>
+    <string name="readable_text_description_v041">显示文字时推荐使用设备比例 / 30%。</string>
+    <string name="menu_description_v041">查看使用的库、隐私和应用信息。</string>
+    <string name="menu_libraries_description_v041">查看 GBModer 使用的主要库和许可证。</string>
+    <string name="menu_privacy_description_v041">查看 GBModer 如何处理数据。</string>
+    <string name="libraries_page_description_v041">本应用使用的主要库和许可证。</string>
+</resources>

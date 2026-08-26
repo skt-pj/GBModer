@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, build/v0.1.46-disable-text-restore-ui]
     paths-ignore:
       - 'dist/**'
   pull_request:
@@ -40,11 +40,11 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Restore stable development signing key
+      - name: Restore common signing key
         run: |
           mkdir -p ci
-          curl -fsSL https://raw.githubusercontent.com/skt-pj/pointCloudSplating/main/ci/pointcloud-dev.jks.b64 -o ci/pointcloud-dev.jks.b64
-          base64 --decode ci/pointcloud-dev.jks.b64 > ci/pointcloud-dev.jks
+          curl -fsSL https://raw.githubusercontent.com/skt-pj/2048TD/main/ci/2048td-release.jks.b64 -o ci/skt-common-signing.jks.b64
+          base64 --decode ci/skt-common-signing.jks.b64 > ci/skt-common-signing.jks
 
       - name: Apply app version
         run: |
@@ -54,39 +54,204 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Test UI specification, renderers, and build signed debug APK
+      - name: Test release UI, conversion, billing implementation, portrait/GPU video, and build signed release APK/AAB
         run: |
           set +e
-          gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug 2>&1 | tee build.log
+          gradle --no-daemon :app:testDebugUnitTest :app:assembleRelease :app:bundleRelease 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           if [ "$status" = "0" ]; then
             python3 tools/verify_ui_spec_v020.py
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_text_scroll_sync_v024.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_uiux_v026.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_media_conversion_v027.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_uiux_v028.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_icon_localization_v030.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_video_pipeline_v031.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_video_gpu_v032.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_aspect_crop_v033.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_portrait_video_v038.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_portrait_orientation_v039.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_resolution_default_v040.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_release_debug_v041.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_debug_live_v042.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_2048_content_v043.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_ui_restore_v046.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_unified_conversion_ui_v034.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_live_billing_v035.py
+            status=$?
+          fi
+          if [ "$status" = "0" ]; then
+            python3 tools/verify_menu_privacy_v036.py
+            status=$?
+          fi
           echo "BUILD_STATUS=$status" >> "$GITHUB_ENV"
           exit 0
 
-      - name: Publish latest APK or failure evidence into repository
-        if: always() && github.event_name == 'push'
+      - name: Verify release APK/AAB digest and common signing certificate
+        if: env.BUILD_STATUS == '0'
+        run: |
+          set -euo pipefail
+          apk_dir="app/build/outputs/apk/release"
+          bundle_dir="app/build/outputs/bundle/release"
+          source_apk="$apk_dir/app-release.apk"
+          source_aab="$bundle_dir/app-release.aab"
+          versioned_apk="$apk_dir/GBModer-v${VERSION_NAME}-release.apk"
+          versioned_aab="$bundle_dir/GBModer-v${VERSION_NAME}-release.aab"
+          cp "$source_apk" "$versioned_apk"
+          cp "$source_aab" "$versioned_aab"
+
+          sha256sum "$versioned_apk" > "$apk_dir/GBModer-v${VERSION_NAME}-release.apk.sha256"
+          sha256sum "$versioned_aab" > "$bundle_dir/GBModer-v${VERSION_NAME}-release.aab.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$versioned_apk" \
+            | tee "$apk_dir/signing-certificate.txt"
+
+          actual_cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$apk_dir/signing-certificate.txt" \
+            | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          expected_cert="E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
+          if [ "$actual_cert" != "$expected_cert" ]; then
+            echo "Unexpected signing certificate: $actual_cert" >&2
+            exit 1
+          fi
+
+          apk_sha=$(cut -d' ' -f1 "$apk_dir/GBModer-v${VERSION_NAME}-release.apk.sha256")
+          aab_sha=$(cut -d' ' -f1 "$bundle_dir/GBModer-v${VERSION_NAME}-release.aab.sha256")
+          apk_bytes=$(stat -c%s "$versioned_apk")
+          aab_bytes=$(stat -c%s "$versioned_aab")
+          cat > "$apk_dir/build-metadata.txt" <<EOF
+          repository=${GITHUB_REPOSITORY}
+          branch=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
+          commit=${GITHUB_SHA}
+          versionName=${VERSION_NAME}
+          versionCode=${VERSION_CODE}
+          ciRunId=${GITHUB_RUN_ID}
+          ciJob=${GITHUB_JOB}
+          buildAndTests=PASS
+          debugFeatures=false
+          apkFile=GBModer-v${VERSION_NAME}-release.apk
+          apkBytes=${apk_bytes}
+          apkSha256=${apk_sha}
+          aabFile=GBModer-v${VERSION_NAME}-release.aab
+          aabBytes=${aab_bytes}
+          aabSha256=${aab_sha}
+          signerCertificateSha256=E6:48:32:00:71:B8:AB:0D:E0:38:F7:67:90:06:4B:99:46:1B:67:D7:DB:E7:CE:75:06:D1:2A:5F:4F:A8:84:D8
+          EOF
+
+      - name: Upload formal release APK and Play AAB
+        if: env.BUILD_STATUS == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBModer-v${{ env.VERSION_NAME }}-release
+          path: |
+            app/build/outputs/apk/release/GBModer-v${{ env.VERSION_NAME }}-release.apk
+            app/build/outputs/apk/release/GBModer-v${{ env.VERSION_NAME }}-release.apk.sha256
+            app/build/outputs/apk/release/signing-certificate.txt
+            app/build/outputs/apk/release/build-metadata.txt
+            app/build/outputs/bundle/release/GBModer-v${{ env.VERSION_NAME }}-release.aab
+            app/build/outputs/bundle/release/GBModer-v${{ env.VERSION_NAME }}-release.aab.sha256
+          if-no-files-found: error
+
+      - name: Build internal APK with live and diagnostics enabled
+        if: env.BUILD_STATUS == '0'
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -PGBMODER_DEBUG_FEATURES=true :app:assembleDebug
+          debug_dir="app/build/outputs/apk/debug"
+          source_apk="$debug_dir/app-debug.apk"
+          internal_apk="$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk"
+          cp "$source_apk" "$internal_apk"
+          sha256sum "$internal_apk" > "$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$internal_apk" \
+            > "$debug_dir/debug-signing-certificate.txt"
+
+      - name: Upload internal debug-feature APK
+        if: env.BUILD_STATUS == '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBModer-v${{ env.VERSION_NAME }}-debug-features
+          path: |
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk.sha256
+            app/build/outputs/apk/debug/debug-signing-certificate.txt
+          if-no-files-found: error
+
+      - name: Publish APK/AAB or failure evidence into repository
+        if: always() && github.event_name == 'push' && github.ref_name == 'main'
         run: |
           mkdir -p dist
-          if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk dist/GBModer-debug.apk
+          if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk" ]; then
+            cp "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk" dist/GBModer-release.apk
+            cp "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk" "dist/GBModer-v${VERSION_NAME}-release.apk"
+            cp "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk.sha256" "dist/GBModer-v${VERSION_NAME}-release.apk.sha256"
+            cp "app/build/outputs/bundle/release/GBModer-v${VERSION_NAME}-release.aab" "dist/GBModer-v${VERSION_NAME}-release.aab"
+            cp "app/build/outputs/bundle/release/GBModer-v${VERSION_NAME}-release.aab.sha256" "dist/GBModer-v${VERSION_NAME}-release.aab.sha256"
+            cp app/build/outputs/apk/release/signing-certificate.txt dist/signing-certificate.txt
+            cp app/build/outputs/apk/release/build-metadata.txt dist/build-metadata.txt
             printf 'versionName=%s\nversionCode=%s\n' "$VERSION_NAME" "$VERSION_CODE" > dist/version.txt
-            rm -f dist/GBModer-v*-debug.apk dist/build-failure.log
+            rm -f dist/build-failure.log
           else
             cp build.log dist/build-failure.log 2>/dev/null || printf 'Build failed before Gradle log was created.\n' > dist/build-failure.log
           fi
           git restore app/build.gradle || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A dist
+          git add dist
           if ! git diff --cached --quiet; then
-            git commit -m "Update latest debug APK"
+            git commit -m "build v${VERSION_NAME:-unknown} release apk/aab"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
 
-      - name: Fail workflow when build or UI verification failed
+      - name: Fail workflow when build or verification failed
         if: env.BUILD_STATUS != '0'
         run: exit 1

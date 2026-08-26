@@ -18,8 +18,8 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.46", "version name")
-require("version.properties", "VERSION_CODE=47", "version code")
+require("version.properties", "VERSION_NAME=0.1.47", "version name")
+require("version.properties", "VERSION_CODE=48", "version code")
 
 build = "app/build.gradle"
 require(build, "GBMODER_DEBUG_FEATURES", "explicit build-time debug flag")
@@ -33,6 +33,7 @@ require(build, "finish_debug_features_v041.py", "v041 Java gate tracked")
 require(build, "finish_text_defaults_v045.py", "v045 text/default finalizer tracked")
 require(build, "finish_ui_restore_v046.py", "v046 UI restore finalizer tracked")
 require(build, "finish_text_disabled_v046.py", "v046 text-disable finalizer tracked")
+require(build, "finish_mode_backdrop_v047.py", "v047 mode backdrop finalizer tracked")
 
 main_manifest = "app/src/main/AndroidManifest.xml"
 debug_manifest = "app/src/debug/AndroidManifest.xml"
@@ -61,6 +62,8 @@ reject(ui, 'title = "文字を読みやすくする"', "readable-text title remo
 require(ui, 'add("端末比 / 30%（テキスト推奨）")', "30 percent text recommendation retained")
 require(ui, "captureRoutePosition,\n                        false,", "text recognition disabled")
 require(ui, "androidx.compose.material3.lightColorScheme(", "non-black light Game Boy UI")
+require(ui, 'testTag("mode-backdrop")', "GB/GBC/GBA/DS backdrop retained")
+require(ui, 'Text(\n                    text = "GB  /  GBC  /  GBA  /  DS"', "mode labels retained in backdrop")
 require(ui, "SectionTitle(androidx.compose.ui.res.stringResource(R.string.live_mode_title))", "live section retained behind debug gate")
 require(ui, 'SectionTitle("2048TD")', "2048TD moved to main screen")
 require(ui, 'testTag("main-2048td")', "2048TD main-screen action")
@@ -114,4 +117,4 @@ workflow = ".github/workflows/build-apk.yml"
 require(workflow, "python3 tools/verify_release_debug_v041.py", "v041 release/debug gate in CI")
 require(workflow, "-PGBMODER_DEBUG_FEATURES=true", "CI builds debug-feature APK explicitly")
 
-print("RELEASE UI + DEBUG FEATURES v0.1.46 AUTOMATED GATE: PASS")
+print("RELEASE UI + DEBUG FEATURES v0.1.47 AUTOMATED GATE: PASS")

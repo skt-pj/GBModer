@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_mode_title">라이브 모드</string>
+    <string name="live_mode_status_active">구독 중</string>
+    <string name="live_mode_status_pending">구매 처리 중</string>
+    <string name="live_mode_status_loading">구독 상태 확인 중</string>
+    <string name="live_mode_status_free">무료 플랜</string>
+    <string name="live_mode_manage">구독 관리</string>
+    <string name="live_mode_active_description">구독 중이므로 라이브 필터를 사용할 수 있습니다.</string>
+    <string name="live_mode_paid_description">라이브 필터는 월간 구독(%1$s)이 필요합니다. 파일 변환 등 다른 기능은 무료입니다.</string>
+    <string name="live_mode_price_from_play">Google Play 표시 가격</string>
+    <string name="live_mode_paywall_headline">라이브 모드 사용</string>
+    <string name="live_mode_paywall_body">GBModer를 실시간 화면 필터로 사용할 수 있습니다. 파일 변환 등 라이브 이외 기능은 계속 무료입니다.</string>
+    <string name="live_mode_benefit_realtime">실시간 라이브 필터</string>
+    <string name="live_mode_other_free">사진, 동영상, 3D 모델 변환, 설정 및 진단 기능은 무료입니다.</string>
+    <string name="live_mode_monthly_price">월 %1$s</string>
+    <string name="live_mode_price_loading">Google Play에서 가격 확인 중</string>
+    <string name="live_mode_auto_renew">취소할 때까지 매월 자동 갱신됩니다.</string>
+    <string name="live_mode_cancel_info">Google Play 구독에서 언제든지 취소할 수 있습니다. 취소 후에도 현재 결제 기간이 끝날 때까지 사용할 수 있습니다.</string>
+    <string name="live_mode_pending_purchase">구매가 처리 중입니다. Google Play에서 결제가 확인되면 라이브 모드를 사용할 수 있습니다.</string>
+    <string name="live_mode_subscribe">월간 플랜 시작</string>
+    <string name="live_mode_loading_purchase">Google Play 로딩 중</string>
+    <string name="live_mode_not_now">나중에</string>
+    <string name="live_mode_purchase_unavailable">Google Play 결제를 사용할 수 없습니다. Play 스토어 연결과 구독 상품 설정을 확인하세요.</string>
+</resources>

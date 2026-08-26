@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_description">GBModer 过滤其他应用画面时显示的常驻通知。</string>
+    <string name="whole_screen_not_supported">无法使用全屏共享。请选择“单个应用”。</string>
+</resources>

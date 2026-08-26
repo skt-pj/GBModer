@@ -1,0 +1,82 @@
+name: CI v0.1.47 APK
+
+on:
+  push:
+    branches: [ci/v0.1.47-base]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-v0147-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '15859902'
+
+      - name: Install Android SDK packages
+        run: yes | sdkmanager --channel=3 "platforms;android-37.0" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Restore common signing key
+        run: |
+          mkdir -p ci
+          curl -fsSL https://raw.githubusercontent.com/skt-pj/2048TD/main/ci/2048td-release.jks.b64 -o ci/skt-common-signing.jks.b64
+          base64 --decode ci/skt-common-signing.jks.b64 > ci/skt-common-signing.jks
+
+      - name: Apply version
+        run: |
+          source version.properties
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" app/build.gradle
+          sed -i -E "s/versionName '[^']+'/versionName '${VERSION_NAME}'/" app/build.gradle
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+
+      - name: Build and validate v0.1.47 debug-features APK
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -PGBMODER_DEBUG_FEATURES=true :app:testDebugUnitTest :app:assembleDebug
+          ui="app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
+          main="app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/MainActivity.java"
+          grep -q 'testTag("mode-backdrop")' "$ui"
+          grep -q 'GAME BOY' "$ui"
+          grep -q 'GAME BOY COLOR' "$ui"
+          grep -q 'GAME BOY ADVANCE' "$ui"
+          grep -q 'NINTENDO DS' "$ui"
+          grep -q 'SectionTitle("2048TD")' "$ui"
+          grep -q 'uiTextRecognitionEnabled = false;' "$main"
+          ! grep -q 'tag = "text-recognition-row"' "$ui"
+          debug_dir="app/build/outputs/apk/debug"
+          apk="$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk"
+          cp "$debug_dir/app-debug.apk" "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee "$debug_dir/debug-signing-certificate.txt"
+          cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$debug_dir/debug-signing-certificate.txt" | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          test "$cert" = "E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBModer-v${{ env.VERSION_NAME }}-debug-features
+          path: |
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk.sha256
+            app/build/outputs/apk/debug/debug-signing-certificate.txt
+          if-no-files-found: error

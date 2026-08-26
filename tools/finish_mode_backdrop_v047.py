@@ -19,14 +19,16 @@ def replace_once(old: str, new: str, label: str) -> None:
 
 
 replace_once(
-    '''        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))
+    '''        if (BuildConfig.DEBUG_FEATURES && !state.accessibilityReady) {
+            FirstSetupCard(actions)
+        }
+''',
+    '''        ModeBackdrop(modePosition)
 
-        if (!state.accessibilityReady) {''',
-    '''        Spacer(Modifier.height(12.dp).testTag("top-quiet-zone"))
-
-        ModeBackdrop(modePosition)
-
-        if (!state.accessibilityReady) {''',
+        if (BuildConfig.DEBUG_FEATURES && !state.accessibilityReady) {
+            FirstSetupCard(actions)
+        }
+''',
     "restore compact mode backdrop",
 )
 

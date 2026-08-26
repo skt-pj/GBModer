@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, build/v0.1.46-disable-text-restore-ui]
     paths-ignore:
       - 'dist/**'
   pull_request:
@@ -226,7 +226,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish APK/AAB or failure evidence into repository
-        if: always() && github.event_name == 'push'
+        if: always() && github.event_name == 'push' && github.ref_name == 'main'
         run: |
           mkdir -p dist
           if [ "${BUILD_STATUS:-1}" = "0" ] && [ -f "app/build/outputs/apk/release/GBModer-v${VERSION_NAME}-release.apk" ]; then

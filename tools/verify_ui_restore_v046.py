@@ -22,11 +22,13 @@ def reject(path: str, needle: str, label: str) -> None:
     print(f"PASS {label}")
 
 
-require("version.properties", "VERSION_NAME=0.1.46", "version name")
-require("version.properties", "VERSION_CODE=47", "version code")
+require("version.properties", "VERSION_NAME=0.1.47", "version name")
+require("version.properties", "VERSION_CODE=48", "version code")
 require("tools/prepare_billing_release_v041.py", "finish_ui_restore_v046.py", "v046 Kotlin finalizer registered")
+require("tools/prepare_billing_release_v041.py", "finish_mode_backdrop_v047.py", "v047 mode backdrop finalizer registered")
 require("tools/prepare_all_sources_v020.py", "finish_text_disabled_v046.py", "v046 Java finalizer registered")
 require("app/build.gradle", "finish_ui_restore_v046.py", "v046 Kotlin finalizer tracked")
+require("app/build.gradle", "finish_mode_backdrop_v047.py", "v047 mode backdrop finalizer tracked")
 require("app/build.gradle", "finish_text_disabled_v046.py", "v046 Java finalizer tracked")
 
 ui = "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
@@ -41,6 +43,16 @@ require(ui, "androidx.compose.material3.lightColorScheme(", "stable light Game B
 require(ui, "background = Color(0xFFE2E6D6)", "non-black Game Boy background")
 require(ui, "surface = Color(0xFFF2F4E8)", "light Game Boy surface")
 reject(ui, "dynamicDarkColorScheme(activity)", "dynamic black theme disabled")
+
+require(ui, "ModeBackdrop(modePosition)", "mode backdrop is rendered on compact settings screen")
+require(ui, 'testTag("mode-backdrop")', "mode backdrop test tag")
+for label in ('shortLabel = "GB"', 'shortLabel = "GBC"', 'shortLabel = "GBA"', 'shortLabel = "DS"'):
+    require(ui, label, f"mode backdrop {label}")
+require(ui, 'text = "GB  /  GBC  /  GBA  /  DS"', "all mode labels shown in backdrop")
+require(ui, 'longLabel = "GAME BOY"', "Game Boy backdrop label")
+require(ui, 'longLabel = "GAME BOY COLOR"', "Game Boy Color backdrop label")
+require(ui, 'longLabel = "GAME BOY ADVANCE"', "Game Boy Advance backdrop label")
+require(ui, 'longLabel = "NINTENDO DS"', "Nintendo DS backdrop label")
 
 require(ui, 'SectionTitle("2048TD")', "2048TD section on main screen")
 require(ui, 'testTag("main-2048td")', "2048TD main-screen action")
@@ -68,6 +80,6 @@ accessibility = "app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder/FilterAcc
 require(accessibility, "&& !windowTextRecognitionEnabled", "GPU route is available when text recognition is off")
 
 workflow = ".github/workflows/build-apk.yml"
-require(workflow, "python3 tools/verify_ui_restore_v046.py", "v046 UI restore gate in CI")
+require(workflow, "python3 tools/verify_ui_restore_v046.py", "UI restore gate in CI")
 
-print("UI RESTORE + TEXT DISABLED v0.1.46 AUTOMATED GATE: PASS")
+print("UI RESTORE + MODE BACKDROP + TEXT DISABLED v0.1.47 AUTOMATED GATE: PASS")

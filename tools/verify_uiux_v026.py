@@ -8,7 +8,7 @@ main = (
 ).read_text()
 compose = (
     root
-    / "app/src/main/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
+    / "app/build/generated/gbmoderBilling/kotlin/com/sktpj/gbmoder/GbModerComposeUi.kt"
 ).read_text()
 
 
@@ -36,8 +36,8 @@ if compose.count(".verticalScroll(rememberScrollState())") != 1:
 print("PASS one settings scroll container")
 
 if 'title = "文字を読みやすくする"' in compose or 'tag = "text-recognition-row"' in compose:
-    raise SystemExit("FAIL readable-text control remains in source UI")
-print("PASS readable-text control removed from source UI")
+    raise SystemExit("FAIL readable-text control remains in compiled UI")
+print("PASS readable-text control removed from compiled UI")
 need(compose, 'Text("詳細設定・診断"', "advanced section")
 need(compose, 'Text("画面取得方式"', "capture route inside advanced section")
 need(compose, 'testTag("capture-route-selector")', "capture route selector test tag")

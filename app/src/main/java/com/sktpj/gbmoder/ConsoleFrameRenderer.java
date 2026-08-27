@@ -2,12 +2,35 @@ package com.sktpj.gbmoder;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 
-/** Draws the selected handheld identity only in the area outside the filtered screen. */
+/**
+ * Draws the device surround behind the filtered screen.
+ *
+ * This intentionally follows the original HTML supplied for GBModer:
+ * gameboy_glb_capture_device_modes_transparent_sheet_fixed_ordered_exports.html
+ *
+ * HTML reference colors:
+ * body/page      #8b956d
+ * .device        #d4d7c8 -> #b5b8aa
+ * .screen-frame  #4b4f40
+ * .screen-label  #cfd5bc
+ * .lcd-wrapper   #6f7d56
+ * .lcd-display   #9bbc0f (the live filtered bitmap is painted over this area)
+ */
 final class ConsoleFrameRenderer {
+    private static final int PAGE_COLOR = Color.rgb(139, 149, 109);      // #8b956d
+    private static final int DEVICE_LIGHT = Color.rgb(212, 215, 200);    // #d4d7c8
+    private static final int DEVICE_DARK = Color.rgb(181, 184, 170);     // #b5b8aa
+    private static final int SCREEN_FRAME = Color.rgb(75, 79, 64);       // #4b4f40
+    private static final int SCREEN_LABEL = Color.rgb(207, 213, 188);    // #cfd5bc
+    private static final int LCD_WRAPPER = Color.rgb(111, 125, 86);      // #6f7d56
+    private static final int LCD_DISPLAY = Color.rgb(155, 188, 15);      // #9bbc0f
+
     private ConsoleFrameRenderer() {
     }
 
@@ -21,212 +44,137 @@ final class ConsoleFrameRenderer {
             int screenWidth,
             int screenHeight
     ) {
-        int width = Math.max(1, viewWidth);
-        int height = Math.max(1, viewHeight);
-        int right = screenLeft + Math.max(1, screenWidth);
-        int bottom = screenTop + Math.max(1, screenHeight);
-        float unit = Math.max(4.0f, Math.min(width, height) * 0.018f);
+        final int width = Math.max(1, viewWidth);
+        final int height = Math.max(1, viewHeight);
+        final int right = screenLeft + Math.max(1, screenWidth);
+        final int bottom = screenTop + Math.max(1, screenHeight);
+        final float unit = Math.max(3.0f, Math.min(width, height) * 0.0125f);
 
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        int bodyColor;
-        int bezelColor;
-        int accentColor;
-        String label;
+        final float topSpace = Math.max(0.0f, screenTop);
+        final float bottomSpace = Math.max(0.0f, height - bottom);
+        final float leftSpace = Math.max(0.0f, screenLeft);
+        final float rightSpace = Math.max(0.0f, width - right);
 
-        if (GameBoyFilter.MODE_GBC.equals(mode)) {
-            bodyColor = Color.rgb(103, 73, 154);
-            bezelColor = Color.rgb(35, 29, 52);
-            accentColor = Color.rgb(217, 91, 151);
-            label = "GBC";
-        } else if (GameBoyFilter.MODE_GBA.equals(mode)) {
-            bodyColor = Color.rgb(77, 70, 142);
-            bezelColor = Color.rgb(31, 31, 48);
-            accentColor = Color.rgb(178, 176, 223);
-            label = "GBA";
-        } else if (GameBoyFilter.MODE_DS.equals(mode)) {
-            bodyColor = Color.rgb(190, 193, 196);
-            bezelColor = Color.rgb(43, 45, 48);
-            accentColor = Color.rgb(100, 104, 108);
-            label = "DS";
-        } else {
-            bodyColor = Color.rgb(204, 202, 193);
-            bezelColor = Color.rgb(31, 38, 61);
-            accentColor = Color.rgb(182, 42, 65);
-            label = "GB";
-        }
-
-        canvas.drawColor(bodyColor);
-
-        // The filtered frame is painted after this method. Drawing the bezel first makes
-        // only the portion outside the screen remain visible, so game content is never covered.
-        float bezelPad = unit * 1.9f;
-        RectF bezel = new RectF(
-                screenLeft - bezelPad,
-                screenTop - bezelPad,
-                right + bezelPad,
-                bottom + bezelPad
-        );
+        final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(bezelColor);
-        canvas.drawRoundRect(bezel, unit * 1.4f, unit * 1.4f, paint);
 
-        float topSpace = Math.max(0, screenTop);
-        float bottomSpace = Math.max(0, height - bottom);
-        float leftSpace = Math.max(0, screenLeft);
-        float rightSpace = Math.max(0, width - right);
+        // Original HTML body background.
+        canvas.drawColor(PAGE_COLOR);
 
-        if (GameBoyFilter.MODE_GB.equals(mode)) {
-            drawGbDetails(canvas, paint, width, height, screenLeft, screenTop, right, bottom,
-                    topSpace, bottomSpace, leftSpace, unit);
-        } else if (GameBoyFilter.MODE_GBC.equals(mode)) {
-            drawGbcDetails(canvas, paint, width, height, screenLeft, screenTop, right, bottom,
-                    bottomSpace, unit);
-        } else if (GameBoyFilter.MODE_GBA.equals(mode)) {
-            drawGbaDetails(canvas, paint, width, height, screenLeft, screenTop, right, bottom,
-                    bottomSpace, unit);
-        } else {
-            drawDsDetails(canvas, paint, width, height, screenLeft, screenTop, right, bottom,
-                    topSpace, bottomSpace, unit);
-        }
+        // Original .device: rounded light gray shell with a subtle diagonal gradient.
+        final float deviceInset = Math.max(1.0f, unit * 0.45f);
+        final RectF device = new RectF(
+                deviceInset,
+                deviceInset,
+                width - deviceInset,
+                height - deviceInset
+        );
+        paint.setShader(new LinearGradient(
+                device.left,
+                device.top,
+                device.right,
+                device.bottom,
+                DEVICE_LIGHT,
+                DEVICE_DARK,
+                Shader.TileMode.CLAMP
+        ));
+        canvas.drawRoundRect(device, unit * 1.35f, unit * 1.35f, paint);
+        paint.setShader(null);
 
-        drawModeLabel(canvas, paint, label, accentColor, width, height,
-                screenLeft, screenTop, right, bottom,
-                topSpace, bottomSpace, leftSpace, rightSpace, unit);
+        // Keep the two nested screen surrounds from the HTML. The actual filtered frame is
+        // drawn after this method, so only the parts outside the content remain visible.
+        final float availablePad = Math.max(
+                0.0f,
+                Math.max(Math.max(topSpace, bottomSpace), Math.max(leftSpace, rightSpace))
+        );
+        final float framePad = Math.max(unit * 0.85f, Math.min(unit * 3.2f, availablePad * 0.46f));
+        final float lcdPad = Math.max(unit * 0.42f, framePad * 0.48f);
+
+        final RectF screenFrame = clippedExpandedRect(
+                screenLeft,
+                screenTop,
+                right,
+                bottom,
+                framePad,
+                width,
+                height,
+                deviceInset
+        );
+        paint.setColor(SCREEN_FRAME);
+        canvas.drawRoundRect(screenFrame, unit * 0.95f, unit * 0.95f, paint);
+
+        final RectF lcdWrapper = clippedExpandedRect(
+                screenLeft,
+                screenTop,
+                right,
+                bottom,
+                lcdPad,
+                width,
+                height,
+                deviceInset
+        );
+        paint.setColor(LCD_WRAPPER);
+        canvas.drawRoundRect(lcdWrapper, unit * 0.52f, unit * 0.52f, paint);
+
+        // Match the HTML LCD backing. It is normally completely covered by the live bitmap;
+        // it only prevents a black seam if integer viewport rounding leaves a pixel exposed.
+        paint.setColor(LCD_DISPLAY);
+        canvas.drawRect(screenLeft, screenTop, right, bottom, paint);
+
+        drawScreenLabel(
+                canvas,
+                paint,
+                modeLabel(mode),
+                width,
+                height,
+                screenLeft,
+                screenTop,
+                right,
+                bottom,
+                topSpace,
+                bottomSpace,
+                leftSpace,
+                rightSpace,
+                framePad,
+                unit
+        );
     }
 
-    private static void drawGbDetails(
-            Canvas canvas,
-            Paint paint,
-            int width,
-            int height,
+    private static RectF clippedExpandedRect(
             int left,
             int top,
             int right,
             int bottom,
-            float topSpace,
-            float bottomSpace,
-            float leftSpace,
-            float unit
-    ) {
-        if (topSpace > unit * 3.0f) {
-            float y = Math.max(unit, top - unit * 1.15f);
-            paint.setStrokeWidth(Math.max(2.0f, unit * 0.22f));
-            paint.setColor(Color.rgb(190, 49, 74));
-            canvas.drawLine(unit * 1.5f, y, width - unit * 1.5f, y, paint);
-            paint.setColor(Color.rgb(69, 83, 181));
-            canvas.drawLine(unit * 1.5f, y + unit * 0.55f, width - unit * 1.5f, y + unit * 0.55f, paint);
-        }
-
-        if (leftSpace > unit * 2.8f) {
-            paint.setColor(Color.rgb(210, 47, 43));
-            canvas.drawCircle(Math.max(unit * 1.5f, left - unit * 1.15f),
-                    top + ((bottom - top) * 0.5f), unit * 0.48f, paint);
-        }
-
-        if (bottomSpace > unit * 5.0f) {
-            float cy = bottom + Math.min(bottomSpace * 0.52f, unit * 5.8f);
-            paint.setColor(Color.rgb(55, 56, 61));
-            canvas.drawCircle(width * 0.72f, cy, unit * 1.55f, paint);
-            canvas.drawCircle(width * 0.83f, cy - unit * 0.45f, unit * 1.55f, paint);
-            paint.setStrokeWidth(unit * 0.8f);
-            canvas.drawLine(width * 0.19f, cy, width * 0.31f, cy, paint);
-            canvas.drawLine(width * 0.25f, cy - unit * 1.6f, width * 0.25f, cy + unit * 1.6f, paint);
-        }
-    }
-
-    private static void drawGbcDetails(
-            Canvas canvas,
-            Paint paint,
+            float pad,
             int width,
             int height,
-            int left,
-            int top,
-            int right,
-            int bottom,
-            float bottomSpace,
-            float unit
+            float inset
     ) {
-        if (bottomSpace <= unit * 3.0f) {
-            return;
-        }
-        float y = bottom + Math.min(bottomSpace * 0.55f, unit * 5.5f);
-        int[] colors = {
-                Color.rgb(80, 180, 86),
-                Color.rgb(246, 205, 68),
-                Color.rgb(239, 88, 84),
-                Color.rgb(94, 142, 224),
-                Color.rgb(169, 91, 197)
-        };
-        float start = width * 0.36f;
-        float gap = width * 0.075f;
-        for (int i = 0; i < colors.length; i++) {
-            paint.setColor(colors[i]);
-            canvas.drawCircle(start + (gap * i), y, unit * 0.46f, paint);
-        }
-        paint.setColor(Color.rgb(47, 40, 63));
-        canvas.drawCircle(width * 0.78f, y + unit * 1.8f, unit * 1.35f, paint);
-        canvas.drawCircle(width * 0.86f, y + unit * 0.8f, unit * 1.35f, paint);
+        return new RectF(
+                Math.max(inset, left - pad),
+                Math.max(inset, top - pad),
+                Math.min(width - inset, right + pad),
+                Math.min(height - inset, bottom + pad)
+        );
     }
 
-    private static void drawGbaDetails(
-            Canvas canvas,
-            Paint paint,
-            int width,
-            int height,
-            int left,
-            int top,
-            int right,
-            int bottom,
-            float bottomSpace,
-            float unit
-    ) {
-        if (bottomSpace <= unit * 3.0f) {
-            return;
+    private static String modeLabel(String mode) {
+        if (GameBoyFilter.MODE_GBC.equals(mode)) {
+            return "DOT MATRIX DISPLAY / 160 x 144 / 15-BIT COLOR";
         }
-        float y = bottom + Math.min(bottomSpace * 0.48f, unit * 5.0f);
-        paint.setColor(Color.rgb(42, 38, 76));
-        canvas.drawCircle(width * 0.79f, y, unit * 1.35f, paint);
-        canvas.drawCircle(width * 0.87f, y - unit * 0.85f, unit * 1.35f, paint);
-        paint.setStrokeWidth(unit * 0.75f);
-        canvas.drawLine(width * 0.16f, y, width * 0.28f, y, paint);
-        canvas.drawLine(width * 0.22f, y - unit * 1.5f, width * 0.22f, y + unit * 1.5f, paint);
+        if (GameBoyFilter.MODE_GBA.equals(mode)) {
+            return "DOT MATRIX DISPLAY / 240 x 160 / 15-BIT COLOR";
+        }
+        if (GameBoyFilter.MODE_DS.equals(mode)) {
+            return "DOT MATRIX DISPLAY / 256 x 192 / DS";
+        }
+        return "DOT MATRIX DISPLAY / 160 x 144 / 4 SHADES";
     }
 
-    private static void drawDsDetails(
-            Canvas canvas,
-            Paint paint,
-            int width,
-            int height,
-            int left,
-            int top,
-            int right,
-            int bottom,
-            float topSpace,
-            float bottomSpace,
-            float unit
-    ) {
-        paint.setColor(Color.rgb(73, 76, 79));
-        if (topSpace > unit * 2.5f) {
-            canvas.drawRoundRect(new RectF(width * 0.30f, top - unit * 1.55f,
-                    width * 0.70f, top - unit * 0.75f), unit * 0.35f, unit * 0.35f, paint);
-        }
-        if (bottomSpace > unit * 4.0f) {
-            float y = bottom + Math.min(bottomSpace * 0.50f, unit * 5.0f);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(unit * 0.35f);
-            canvas.drawRoundRect(new RectF(width * 0.28f, y - unit * 2.0f,
-                    width * 0.72f, y + unit * 2.0f), unit * 0.55f, unit * 0.55f, paint);
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(width * 0.82f, y, unit * 0.75f, paint);
-            canvas.drawCircle(width * 0.88f, y, unit * 0.75f, paint);
-        }
-    }
-
-    private static void drawModeLabel(
+    private static void drawScreenLabel(
             Canvas canvas,
             Paint paint,
             String label,
-            int accentColor,
             int width,
             int height,
             int left,
@@ -237,27 +185,42 @@ final class ConsoleFrameRenderer {
             float bottomSpace,
             float leftSpace,
             float rightSpace,
+            float framePad,
             float unit
     ) {
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(accentColor);
-        paint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        final float minLabelSpace = Math.max(unit * 2.2f, 22.0f);
+        paint.setShader(null);
+        paint.setColor(SCREEN_LABEL);
+        paint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
         paint.setTextAlign(Paint.Align.CENTER);
-        paint.setTextSize(Math.max(16.0f, unit * 2.6f));
+        paint.setTextSize(Math.max(10.0f, Math.min(16.0f, unit * 1.08f)));
 
-        if (bottomSpace >= topSpace && bottomSpace >= leftSpace && bottomSpace >= rightSpace
-                && bottomSpace > unit * 2.5f) {
-            canvas.drawText(label, width * 0.5f,
-                    Math.min(height - unit, bottom + Math.max(unit * 3.0f, bottomSpace * 0.78f)), paint);
-        } else if (topSpace >= leftSpace && topSpace >= rightSpace && topSpace > unit * 2.5f) {
-            canvas.drawText(label, width * 0.5f, Math.max(unit * 2.5f, top * 0.45f), paint);
-        } else if (leftSpace >= rightSpace && leftSpace > unit * 3.0f) {
+        // The HTML label sits above the LCD. Prefer the same location. On rotations where the
+        // top gap is too small, move it to the largest available excess area instead of
+        // inventing buttons or handheld controls.
+        if (topSpace >= minLabelSpace) {
+            final float y = Math.max(unit * 1.35f, top - Math.max(unit * 0.78f, framePad * 0.54f));
+            canvas.drawText(label, width * 0.5f, y, paint);
+            return;
+        }
+        if (bottomSpace >= minLabelSpace) {
+            final float y = Math.min(height - unit * 0.75f,
+                    bottom + Math.max(unit * 1.35f, framePad * 0.88f));
+            canvas.drawText(label, width * 0.5f, y, paint);
+            return;
+        }
+
+        if (leftSpace >= minLabelSpace && leftSpace >= rightSpace) {
+            final float x = Math.max(unit * 1.25f, left - Math.max(unit, framePad * 0.72f));
             canvas.save();
-            canvas.rotate(-90.0f, left * 0.45f, height * 0.5f);
-            canvas.drawText(label, left * 0.45f, height * 0.5f, paint);
+            canvas.rotate(-90.0f, x, height * 0.5f);
+            canvas.drawText(label, x, height * 0.5f, paint);
             canvas.restore();
-        } else if (rightSpace > unit * 3.0f) {
-            float x = right + (rightSpace * 0.55f);
+            return;
+        }
+        if (rightSpace >= minLabelSpace) {
+            final float x = Math.min(width - unit * 1.25f,
+                    right + Math.max(unit, framePad * 0.72f));
             canvas.save();
             canvas.rotate(90.0f, x, height * 0.5f);
             canvas.drawText(label, x, height * 0.5f, paint);

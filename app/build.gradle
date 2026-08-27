@@ -36,6 +36,7 @@ def prepareGpuSource = tasks.register('prepareGpuSource', Exec) {
     inputs.file(rootProject.file('tools/finish_2048_fit_v044.py'))
     inputs.file(rootProject.file('tools/finish_resolution_default_v045.py'))
     inputs.file(rootProject.file('tools/finish_text_disabled_v046.py'))
+    inputs.file(rootProject.file('tools/finish_console_frame_v049.py'))
     outputs.dir(generatedGpuSourceDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_all_sources_v020.py').absolutePath,
@@ -54,8 +55,6 @@ def prepareBillingKotlin = tasks.register('prepareBillingKotlin', Exec) {
     inputs.file(rootProject.file('tools/finish_2048_menu_v043.py'))
     inputs.file(rootProject.file('tools/finish_text_defaults_v045.py'))
     inputs.file(rootProject.file('tools/finish_ui_restore_v046.py'))
-    inputs.file(rootProject.file('tools/finish_mode_backdrop_v047.py'))
-    inputs.file(rootProject.file('tools/finish_mode_shell_v048.py'))
     outputs.dir(generatedBillingKotlinDir)
     commandLine 'python3',
             rootProject.file('tools/prepare_billing_release_v041.py').absolutePath,

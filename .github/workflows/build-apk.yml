@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [main, build/v0.1.46-disable-text-restore-ui]
+    branches: [main, build/v0.1.46-disable-text-restore-ui, build/v0.1.48-mode-shell-background]
     paths-ignore:
       - 'dist/**'
   pull_request:

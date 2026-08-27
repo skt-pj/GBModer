@@ -42,34 +42,12 @@ gpu = replace_once(
 gpu_path.write_text(gpu)
 
 
-# CPU fallback uses the same console backdrop and selected live mode. The filtered
-# bitmap is still drawn last, so the frame never covers game/application content.
+# prepare_gpu_source.py already gives FilterOverlayView a reference named `service`.
+# Reuse it so the CPU fallback paints the same selected GB/GBC/GBA/DS shell.
 access_path = root / "FilterAccessibilityService.java"
 access = access_path.read_text()
-access = replace_once(
-    access,
-    '''    private static final class FilterOverlayView extends View {
-        private final Paint paint = new Paint();
-''',
-    '''    private static final class FilterOverlayView extends View {
-        private final FilterAccessibilityService service;
-        private final Paint paint = new Paint();
-''',
-    "CPU overlay service reference",
-)
-access = replace_once(
-    access,
-    '''        FilterOverlayView(FilterAccessibilityService context) {
-            super(context);
-            paint.setFilterBitmap(false);
-''',
-    '''        FilterOverlayView(FilterAccessibilityService context) {
-            super(context);
-            service = context;
-            paint.setFilterBitmap(false);
-''',
-    "CPU overlay selected mode source",
-)
+if "private final FilterAccessibilityService service;" not in access:
+    raise SystemExit("CPU overlay service reference missing before v0.1.49 finalizer")
 access = replace_once(
     access,
     '''            canvas.drawColor(Color.BLACK);

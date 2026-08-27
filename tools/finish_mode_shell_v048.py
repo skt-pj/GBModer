@@ -19,11 +19,7 @@ def replace_once(old: str, new: str, label: str) -> None:
 
 
 replace_once(
-    '''    Column(
-        modifier = modifier
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-            .testTag("settings-scroll"),
+    '''    val resolutions = buildList {
 ''',
     '''    val modeShellColor = when (modePosition) {
         1 -> Color(0xFFD8D3F0) // GBC shell
@@ -32,15 +28,19 @@ replace_once(
         else -> Color(0xFFB7C48D) // GB shell
     }
 
-    Column(
-        modifier = modifier
-            .background(modeShellColor)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-            .testTag("settings-scroll")
-            .testTag("mode-shell-background"),
+    val resolutions = buildList {
 ''',
-    "apply selected console shell color to full compact settings background",
+    "add selected console shell color",
+)
+
+replace_once(
+    '''            .verticalScroll(rememberScrollState())
+''',
+    '''            .background(modeShellColor)
+            .testTag("mode-shell-background")
+            .verticalScroll(rememberScrollState())
+''',
+    "paint full compact settings background from selected console mode",
 )
 
 replace_once(

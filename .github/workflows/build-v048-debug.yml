@@ -1,0 +1,62 @@
+name: v0.1.48 Debug APK
+
+on:
+  push:
+    branches: [build/v0.1.48-mode-shell-background]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v048-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '15859902'
+      - name: Install Android SDK packages
+        run: yes | sdkmanager --channel=3 "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Restore common signing key
+        run: |
+          mkdir -p ci
+          curl -fsSL https://raw.githubusercontent.com/skt-pj/2048TD/main/ci/2048td-release.jks.b64 -o ci/skt-common-signing.jks.b64
+          base64 --decode ci/skt-common-signing.jks.b64 > ci/skt-common-signing.jks
+      - name: Apply version and build internal APK
+        run: |
+          set -euo pipefail
+          source version.properties
+          test "$VERSION_NAME" = "0.1.48"
+          test "$VERSION_CODE" = "49"
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" app/build.gradle
+          sed -i -E "s/versionName '[^']+'/versionName '${VERSION_NAME}'/" app/build.gradle
+          gradle --no-daemon -PGBMODER_DEBUG_FEATURES=true :app:testDebugUnitTest :app:assembleDebug
+          python3 tools/verify_ui_restore_v046.py
+          debug_dir="app/build/outputs/apk/debug"
+          cp "$debug_dir/app-debug.apk" "$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk"
+          sha256sum "$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk" > "$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$debug_dir/GBModer-v${VERSION_NAME}-debug-features.apk" | tee "$debug_dir/debug-signing-certificate.txt"
+          cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$debug_dir/debug-signing-certificate.txt" | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          test "$cert" = "E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+      - name: Upload v0.1.48 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBModer-v${{ env.VERSION_NAME }}-debug-features-v048
+          path: |
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk.sha256
+            app/build/outputs/apk/debug/debug-signing-certificate.txt
+          if-no-files-found: error

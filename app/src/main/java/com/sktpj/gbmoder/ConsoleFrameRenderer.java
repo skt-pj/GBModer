@@ -1,35 +1,20 @@
 package com.sktpj.gbmoder;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Shader;
-import android.graphics.Typeface;
 
-/**
- * Draws the device surround behind the filtered screen.
- *
- * This intentionally follows the original HTML supplied for GBModer:
- * gameboy_glb_capture_device_modes_transparent_sheet_fixed_ordered_exports.html
- *
- * HTML reference colors:
- * body/page      #8b956d
- * .device        #d4d7c8 -> #b5b8aa
- * .screen-frame  #4b4f40
- * .screen-label  #cfd5bc
- * .lcd-wrapper   #6f7d56
- * .lcd-display   #9bbc0f (the live filtered bitmap is painted over this area)
- */
+/** Draws the supplied handheld image and maps filtered content into its physical LCD. */
 final class ConsoleFrameRenderer {
-    private static final int PAGE_COLOR = Color.rgb(139, 149, 109);      // #8b956d
-    private static final int DEVICE_LIGHT = Color.rgb(212, 215, 200);    // #d4d7c8
-    private static final int DEVICE_DARK = Color.rgb(181, 184, 170);     // #b5b8aa
-    private static final int SCREEN_FRAME = Color.rgb(75, 79, 64);       // #4b4f40
-    private static final int SCREEN_LABEL = Color.rgb(207, 213, 188);    // #cfd5bc
-    private static final int LCD_WRAPPER = Color.rgb(111, 125, 86);      // #6f7d56
-    private static final int LCD_DISPLAY = Color.rgb(155, 188, 15);      // #9bbc0f
+    static final int VIDEO_FRAME_SIZE = 512;
+
+    private static final float[] GB_SCREEN = {0.240000f, 0.144681f, 0.760000f, 0.440851f};
+    private static final float[] GBC_SCREEN = {0.214286f, 0.138865f, 0.791429f, 0.466376f};
+    private static final float[] GBA_SCREEN = {0.300826f, 0.211921f, 0.700000f, 0.667550f};
+    private static final float[] DS_SCREEN = {0.275238f, 0.095495f, 0.736190f, 0.423423f};
 
     private ConsoleFrameRenderer() {
     }
@@ -39,192 +24,133 @@ final class ConsoleFrameRenderer {
             String mode,
             int viewWidth,
             int viewHeight,
-            int screenLeft,
-            int screenTop,
-            int screenWidth,
-            int screenHeight
+            int ignoredScreenLeft,
+            int ignoredScreenTop,
+            int ignoredScreenWidth,
+            int ignoredScreenHeight
     ) {
-        final int width = Math.max(1, viewWidth);
-        final int height = Math.max(1, viewHeight);
-        final int right = screenLeft + Math.max(1, screenWidth);
-        final int bottom = screenTop + Math.max(1, screenHeight);
-        final float unit = Math.max(3.0f, Math.min(width, height) * 0.0125f);
+        draw(canvas, mode, viewWidth, viewHeight);
+    }
 
-        final float topSpace = Math.max(0.0f, screenTop);
-        final float bottomSpace = Math.max(0.0f, height - bottom);
-        final float leftSpace = Math.max(0.0f, screenLeft);
-        final float rightSpace = Math.max(0.0f, width - right);
+    static void draw(Canvas canvas, String mode, int viewWidth, int viewHeight) {
+        int width = Math.max(1, viewWidth);
+        int height = Math.max(1, viewHeight);
+        canvas.drawColor(Color.WHITE);
 
-        final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setStyle(Paint.Style.FILL);
-
-        // Original HTML body background.
-        canvas.drawColor(PAGE_COLOR);
-
-        // Original .device: rounded light gray shell with a subtle diagonal gradient.
-        final float deviceInset = Math.max(1.0f, unit * 0.45f);
-        final RectF device = new RectF(
-                deviceInset,
-                deviceInset,
-                width - deviceInset,
-                height - deviceInset
-        );
-        paint.setShader(new LinearGradient(
-                device.left,
-                device.top,
-                device.right,
-                device.bottom,
-                DEVICE_LIGHT,
-                DEVICE_DARK,
-                Shader.TileMode.CLAMP
-        ));
-        canvas.drawRoundRect(device, unit * 1.35f, unit * 1.35f, paint);
-        paint.setShader(null);
-
-        // Keep the two nested screen surrounds from the HTML. The actual filtered frame is
-        // drawn after this method, so only the parts outside the content remain visible.
-        final float availablePad = Math.max(
-                0.0f,
-                Math.max(Math.max(topSpace, bottomSpace), Math.max(leftSpace, rightSpace))
-        );
-        final float framePad = Math.max(unit * 0.85f, Math.min(unit * 3.2f, availablePad * 0.46f));
-        final float lcdPad = Math.max(unit * 0.42f, framePad * 0.48f);
-
-        final RectF screenFrame = clippedExpandedRect(
-                screenLeft,
-                screenTop,
-                right,
-                bottom,
-                framePad,
-                width,
-                height,
-                deviceInset
-        );
-        paint.setColor(SCREEN_FRAME);
-        canvas.drawRoundRect(screenFrame, unit * 0.95f, unit * 0.95f, paint);
-
-        final RectF lcdWrapper = clippedExpandedRect(
-                screenLeft,
-                screenTop,
-                right,
-                bottom,
-                lcdPad,
-                width,
-                height,
-                deviceInset
-        );
-        paint.setColor(LCD_WRAPPER);
-        canvas.drawRoundRect(lcdWrapper, unit * 0.52f, unit * 0.52f, paint);
-
-        // Match the HTML LCD backing. It is normally completely covered by the live bitmap;
-        // it only prevents a black seam if integer viewport rounding leaves a pixel exposed.
-        paint.setColor(LCD_DISPLAY);
-        canvas.drawRect(screenLeft, screenTop, right, bottom, paint);
-
-        drawScreenLabel(
-                canvas,
-                paint,
-                modeLabel(mode),
-                width,
-                height,
-                screenLeft,
-                screenTop,
-                right,
-                bottom,
-                topSpace,
-                bottomSpace,
-                leftSpace,
-                rightSpace,
-                framePad,
-                unit
+        Bitmap chassis = ChassisImageAssets.get(mode);
+        RectF destination = getImageRect(chassis, width, height);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        canvas.drawBitmap(
+                chassis,
+                new Rect(0, 0, chassis.getWidth(), chassis.getHeight()),
+                destination,
+                paint
         );
     }
 
-    private static RectF clippedExpandedRect(
-            int left,
-            int top,
-            int right,
-            int bottom,
-            float pad,
-            int width,
-            int height,
-            float inset
+    /** Returns the live/game viewport, fitted inside the actual LCD without stretching. */
+    static int[] getScreenRect(String mode, int viewWidth, int viewHeight) {
+        Bitmap chassis = ChassisImageAssets.get(mode);
+        RectF raw = getRawScreenRect(mode, chassis, Math.max(1, viewWidth), Math.max(1, viewHeight));
+        float targetAspect = modeAspect(mode);
+        RectF fitted = fitAspect(raw, targetAspect);
+        return new int[]{
+                Math.round(fitted.left),
+                Math.round(fitted.top),
+                Math.max(1, Math.round(fitted.width())),
+                Math.max(1, Math.round(fitted.height()))
+        };
+    }
+
+    /** Produces a self-contained video frame with the selected handheld around filtered content. */
+    static Bitmap composeVideoFrame(Bitmap content, String mode) {
+        Bitmap result = Bitmap.createBitmap(
+                VIDEO_FRAME_SIZE,
+                VIDEO_FRAME_SIZE,
+                Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(result);
+        draw(canvas, mode, VIDEO_FRAME_SIZE, VIDEO_FRAME_SIZE);
+
+        Bitmap chassis = ChassisImageAssets.get(mode);
+        RectF raw = getRawScreenRect(mode, chassis, VIDEO_FRAME_SIZE, VIDEO_FRAME_SIZE);
+        float contentAspect = content.getWidth() / (float) Math.max(1, content.getHeight());
+        RectF destination = fitAspect(raw, contentAspect);
+
+        Paint contentPaint = new Paint();
+        contentPaint.setAntiAlias(false);
+        contentPaint.setFilterBitmap(false);
+        canvas.drawBitmap(
+                content,
+                new Rect(0, 0, content.getWidth(), content.getHeight()),
+                destination,
+                contentPaint
+        );
+        return result;
+    }
+
+    private static RectF getRawScreenRect(
+            String mode,
+            Bitmap chassis,
+            int viewWidth,
+            int viewHeight
     ) {
+        RectF image = getImageRect(chassis, viewWidth, viewHeight);
+        float[] slot = screenSlot(mode);
         return new RectF(
-                Math.max(inset, left - pad),
-                Math.max(inset, top - pad),
-                Math.min(width - inset, right + pad),
-                Math.min(height - inset, bottom + pad)
+                image.left + image.width() * slot[0],
+                image.top + image.height() * slot[1],
+                image.left + image.width() * slot[2],
+                image.top + image.height() * slot[3]
         );
     }
 
-    private static String modeLabel(String mode) {
-        if (GameBoyFilter.MODE_GBC.equals(mode)) {
-            return "DOT MATRIX DISPLAY / 160 x 144 / 15-BIT COLOR";
+    private static RectF getImageRect(Bitmap chassis, int viewWidth, int viewHeight) {
+        float sourceAspect = chassis.getWidth() / (float) Math.max(1, chassis.getHeight());
+        float width = viewWidth;
+        float height = width / sourceAspect;
+        if (height > viewHeight) {
+            height = viewHeight;
+            width = height * sourceAspect;
         }
+        float left = (viewWidth - width) * 0.5f;
+        float top = (viewHeight - height) * 0.5f;
+        return new RectF(left, top, left + width, top + height);
+    }
+
+    private static RectF fitAspect(RectF slot, float aspect) {
+        float safeAspect = Math.max(0.01f, aspect);
+        float width = slot.width();
+        float height = width / safeAspect;
+        if (height > slot.height()) {
+            height = slot.height();
+            width = height * safeAspect;
+        }
+        float left = slot.left + (slot.width() - width) * 0.5f;
+        float top = slot.top + (slot.height() - height) * 0.5f;
+        return new RectF(left, top, left + width, top + height);
+    }
+
+    private static float modeAspect(String mode) {
         if (GameBoyFilter.MODE_GBA.equals(mode)) {
-            return "DOT MATRIX DISPLAY / 240 x 160 / 15-BIT COLOR";
+            return 240.0f / 160.0f;
         }
         if (GameBoyFilter.MODE_DS.equals(mode)) {
-            return "DOT MATRIX DISPLAY / 256 x 192 / DS";
+            return 256.0f / 192.0f;
         }
-        return "DOT MATRIX DISPLAY / 160 x 144 / 4 SHADES";
+        return 160.0f / 144.0f;
     }
 
-    private static void drawScreenLabel(
-            Canvas canvas,
-            Paint paint,
-            String label,
-            int width,
-            int height,
-            int left,
-            int top,
-            int right,
-            int bottom,
-            float topSpace,
-            float bottomSpace,
-            float leftSpace,
-            float rightSpace,
-            float framePad,
-            float unit
-    ) {
-        final float minLabelSpace = Math.max(unit * 2.2f, 22.0f);
-        paint.setShader(null);
-        paint.setColor(SCREEN_LABEL);
-        paint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
-        paint.setTextAlign(Paint.Align.CENTER);
-        paint.setTextSize(Math.max(10.0f, Math.min(16.0f, unit * 1.08f)));
-
-        // The HTML label sits above the LCD. Prefer the same location. On rotations where the
-        // top gap is too small, move it to the largest available excess area instead of
-        // inventing buttons or handheld controls.
-        if (topSpace >= minLabelSpace) {
-            final float y = Math.max(unit * 1.35f, top - Math.max(unit * 0.78f, framePad * 0.54f));
-            canvas.drawText(label, width * 0.5f, y, paint);
-            return;
+    private static float[] screenSlot(String mode) {
+        if (GameBoyFilter.MODE_GBC.equals(mode)) {
+            return GBC_SCREEN;
         }
-        if (bottomSpace >= minLabelSpace) {
-            final float y = Math.min(height - unit * 0.75f,
-                    bottom + Math.max(unit * 1.35f, framePad * 0.88f));
-            canvas.drawText(label, width * 0.5f, y, paint);
-            return;
+        if (GameBoyFilter.MODE_GBA.equals(mode)) {
+            return GBA_SCREEN;
         }
-
-        if (leftSpace >= minLabelSpace && leftSpace >= rightSpace) {
-            final float x = Math.max(unit * 1.25f, left - Math.max(unit, framePad * 0.72f));
-            canvas.save();
-            canvas.rotate(-90.0f, x, height * 0.5f);
-            canvas.drawText(label, x, height * 0.5f, paint);
-            canvas.restore();
-            return;
+        if (GameBoyFilter.MODE_DS.equals(mode)) {
+            return DS_SCREEN;
         }
-        if (rightSpace >= minLabelSpace) {
-            final float x = Math.min(width - unit * 1.25f,
-                    right + Math.max(unit, framePad * 0.72f));
-            canvas.save();
-            canvas.rotate(90.0f, x, height * 0.5f);
-            canvas.drawText(label, x, height * 0.5f, paint);
-            canvas.restore();
-        }
+        return GB_SCREEN;
     }
 }

@@ -15,19 +15,12 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def replace_count(text: str, old: str, new: str, expected: int, label: str) -> str:
-    count = text.count(old)
-    if count != expected:
-        raise SystemExit(f"{label}: expected {expected} matches, got {count}")
-    return text.replace(old, new)
-
-
 # Live/game GPU + CPU paths use the source window aspect and fit it inside the real LCD.
 # Resolution remains the pixel-grid density; it no longer changes the window geometry.
 access_path = root / "FilterAccessibilityService.java"
 access = access_path.read_text()
 
-old_target = r'''            int targetWidth = GameBoyFilter.getTargetWidth(
+old_cpu_target = r'''            int targetWidth = GameBoyFilter.getTargetWidth(
                     windowFilterResolution,
                     source.getWidth()
             );
@@ -36,7 +29,7 @@ old_target = r'''            int targetWidth = GameBoyFilter.getTargetWidth(
                     source.getHeight()
             );
 '''
-new_target = r'''            int requestedTargetWidth = GameBoyFilter.getTargetWidth(
+new_cpu_target = r'''            int requestedTargetWidth = GameBoyFilter.getTargetWidth(
                     windowFilterResolution,
                     source.getWidth()
             );
@@ -53,7 +46,35 @@ new_target = r'''            int requestedTargetWidth = GameBoyFilter.getTargetW
             int targetWidth = preservedGrid[0];
             int targetHeight = preservedGrid[1];
 '''
-access = replace_count(access, old_target, new_target, 2, "GPU/CPU preserved pixel grid")
+access = replace_once(access, old_cpu_target, new_cpu_target, "CPU preserved pixel grid")
+
+old_gpu_target = r'''                            int targetWidth = GameBoyFilter.getTargetWidth(
+                                    windowFilterResolution,
+                                    hardwareBitmap.getWidth()
+                            );
+                            int targetHeight = GameBoyFilter.getTargetHeight(
+                                    windowFilterResolution,
+                                    hardwareBitmap.getHeight()
+                            );
+'''
+new_gpu_target = r'''                            int requestedTargetWidth = GameBoyFilter.getTargetWidth(
+                                    windowFilterResolution,
+                                    hardwareBitmap.getWidth()
+                            );
+                            int requestedTargetHeight = GameBoyFilter.getTargetHeight(
+                                    windowFilterResolution,
+                                    hardwareBitmap.getHeight()
+                            );
+                            int[] preservedGrid = ConsoleFrameRenderer.fitPixelGrid(
+                                    hardwareBitmap.getWidth(),
+                                    hardwareBitmap.getHeight(),
+                                    requestedTargetWidth,
+                                    requestedTargetHeight
+                            );
+                            int targetWidth = preservedGrid[0];
+                            int targetHeight = preservedGrid[1];
+'''
+access = replace_once(access, old_gpu_target, new_gpu_target, "GPU preserved pixel grid")
 
 old_cpu_crop = r'''            int[] crop = GameBoyFilter.getCenterCropBounds(windowFilterResolution, source.getWidth(), source.getHeight());
             canvas.drawColor(Color.BLACK);

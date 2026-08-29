@@ -1,0 +1,112 @@
+name: v0.1.53 LCD Window Aspect Debug APK
+
+on:
+  push:
+    branches: [build/v0.1.53-lcd-window-aspect]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v053-lcd-window-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '15859902'
+
+      - name: Install Android SDK packages
+        run: yes | sdkmanager --channel=3 "platforms;android-37.0" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Restore common signing key
+        run: |
+          mkdir -p ci
+          curl -fsSL https://raw.githubusercontent.com/skt-pj/2048TD/main/ci/2048td-release.jks.b64 -o ci/skt-common-signing.jks.b64
+          base64 --decode ci/skt-common-signing.jks.b64 > ci/skt-common-signing.jks
+
+      - name: Apply v0.1.53 version
+        run: |
+          set -euo pipefail
+          source version.properties
+          test "$VERSION_NAME" = "0.1.53"
+          test "$VERSION_CODE" = "54"
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" app/build.gradle
+          sed -i -E "s/versionName '[^']+'/versionName '${VERSION_NAME}'/" app/build.gradle
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+
+      - name: Build and verify LCD-window debug APK
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -PGBMODER_DEBUG_FEATURES=true :app:testDebugUnitTest :app:assembleDebug
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder')
+          gpu = (root / 'GpuFilterRenderer.java').read_text()
+          access = (root / 'FilterAccessibilityService.java').read_text()
+          media = (root / 'MediaFileConverter.java').read_text()
+          renderer = (root / 'ConsoleFrameRenderer.java').read_text()
+
+          assert 'getContentRect(' in renderer
+          assert 'fitPixelGrid(' in renderer
+          assert 'modeAspect(' not in renderer
+          assert 'ConsoleFrameRenderer.getContentRect' in gpu
+          assert 'runtimeShader.setFloatUniform("cropOffset", 0.0f, 0.0f)' in gpu
+          assert 'runtimeShader.setFloatUniform("cropSize", 1.0f, 1.0f)' in gpu
+          assert access.count('ConsoleFrameRenderer.fitPixelGrid') >= 2
+          assert 'new Rect(0, 0, source.getWidth(), source.getHeight())' in access
+          assert 'ConsoleFrameRenderer.getContentRect' in access
+          assert 'source_aspect_preserved=' in media
+          assert 'ConsoleFrameRenderer.fitPixelGrid' in media
+          assert 'chassisVideo,' in media
+          print('v0.1.53 LCD-window/aspect generated-source verification passed')
+          PY
+
+          out="app/build/outputs/apk/debug"
+          cp "$out/app-debug.apk" "$out/GBModer-v${VERSION_NAME}-debug-features.apk"
+          sha256sum "$out/GBModer-v${VERSION_NAME}-debug-features.apk" | tee "$out/GBModer-v${VERSION_NAME}-debug-features.apk.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$out/GBModer-v${VERSION_NAME}-debug-features.apk" | tee "$out/debug-signing-certificate.txt"
+          cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$out/debug-signing-certificate.txt" | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          test "$cert" = "E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$out/GBModer-v${VERSION_NAME}-debug-features.apk" | head -n 5 | tee "$out/apk-badging.txt"
+          grep -q "versionCode='54'" "$out/apk-badging.txt"
+          grep -q "versionName='0.1.53'" "$out/apk-badging.txt"
+          cat > "$out/build-metadata.txt" <<EOF
+          branch=${GITHUB_REF_NAME}
+          commit=${GITHUB_SHA}
+          run_id=${GITHUB_RUN_ID}
+          versionName=${VERSION_NAME}
+          versionCode=${VERSION_CODE}
+          debugFeatures=true
+          lcdWindow=true
+          sourceAspectPreserved=true
+          signerSha256=${cert}
+          EOF
+
+      - name: Upload v0.1.53 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBModer-v${{ env.VERSION_NAME }}-debug-features-v053-lcd-window-aspect
+          path: |
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk.sha256
+            app/build/outputs/apk/debug/debug-signing-certificate.txt
+            app/build/outputs/apk/debug/apk-badging.txt
+            app/build/outputs/apk/debug/build-metadata.txt
+          if-no-files-found: error

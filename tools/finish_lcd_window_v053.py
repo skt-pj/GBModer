@@ -76,24 +76,8 @@ new_gpu_target = r'''                            int requestedTargetWidth = Game
 '''
 access = replace_once(access, old_gpu_target, new_gpu_target, "GPU preserved pixel grid")
 
-old_cpu_crop = r'''            int[] crop = GameBoyFilter.getCenterCropBounds(windowFilterResolution, source.getWidth(), source.getHeight());
-            canvas.drawColor(Color.BLACK);
-            canvas.drawBitmap(
-                    source,
-                    new Rect(crop[0], crop[1], crop[2], crop[3]),
-                    new Rect(0, 0, targetWidth, targetHeight),
-                    downsamplePaint
-            );
-'''
-new_cpu_crop = r'''            canvas.drawColor(Color.BLACK);
-            canvas.drawBitmap(
-                    source,
-                    new Rect(0, 0, source.getWidth(), source.getHeight()),
-                    new Rect(0, 0, targetWidth, targetHeight),
-                    downsamplePaint
-            );
-'''
-access = replace_once(access, old_cpu_crop, new_cpu_crop, "CPU preserve full source aspect")
+# The accessibility CPU downsample already uses the complete source rectangle. Leave it intact;
+# changing only targetWidth/targetHeight above preserves its source aspect without a crop.
 
 old_cpu_lcd = r'''            int[] chassisScreen = ConsoleFrameRenderer.getScreenRect(
                     service.windowFilterMode,

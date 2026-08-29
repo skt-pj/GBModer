@@ -15,12 +15,13 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-# Live/game GPU + CPU paths use the source window aspect and fit it inside the real LCD.
-# Resolution remains the pixel-grid density; it no longer changes the window geometry.
+# Live/game: preserve the captured window aspect. Resolution controls pixel density only.
 access_path = root / "FilterAccessibilityService.java"
 access = access_path.read_text()
 
-old_cpu_target = r'''            int targetWidth = GameBoyFilter.getTargetWidth(
+access = replace_once(
+    access,
+    r'''            int targetWidth = GameBoyFilter.getTargetWidth(
                     windowFilterResolution,
                     source.getWidth()
             );
@@ -28,8 +29,8 @@ old_cpu_target = r'''            int targetWidth = GameBoyFilter.getTargetWidth(
                     windowFilterResolution,
                     source.getHeight()
             );
-'''
-new_cpu_target = r'''            int requestedTargetWidth = GameBoyFilter.getTargetWidth(
+''',
+    r'''            int requestedTargetWidth = GameBoyFilter.getTargetWidth(
                     windowFilterResolution,
                     source.getWidth()
             );
@@ -38,17 +39,18 @@ new_cpu_target = r'''            int requestedTargetWidth = GameBoyFilter.getTar
                     source.getHeight()
             );
             int[] preservedGrid = ConsoleFrameRenderer.fitPixelGrid(
-                    source.getWidth(),
-                    source.getHeight(),
-                    requestedTargetWidth,
-                    requestedTargetHeight
+                    source.getWidth(), source.getHeight(),
+                    requestedTargetWidth, requestedTargetHeight
             );
             int targetWidth = preservedGrid[0];
             int targetHeight = preservedGrid[1];
-'''
-access = replace_once(access, old_cpu_target, new_cpu_target, "CPU preserved pixel grid")
+''',
+    "CPU preserved pixel grid",
+)
 
-old_gpu_target = r'''                            int targetWidth = GameBoyFilter.getTargetWidth(
+access = replace_once(
+    access,
+    r'''                            int targetWidth = GameBoyFilter.getTargetWidth(
                                     windowFilterResolution,
                                     hardwareBitmap.getWidth()
                             );
@@ -56,8 +58,8 @@ old_gpu_target = r'''                            int targetWidth = GameBoyFilter
                                     windowFilterResolution,
                                     hardwareBitmap.getHeight()
                             );
-'''
-new_gpu_target = r'''                            int requestedTargetWidth = GameBoyFilter.getTargetWidth(
+''',
+    r'''                            int requestedTargetWidth = GameBoyFilter.getTargetWidth(
                                     windowFilterResolution,
                                     hardwareBitmap.getWidth()
                             );
@@ -66,20 +68,18 @@ new_gpu_target = r'''                            int requestedTargetWidth = Game
                                     hardwareBitmap.getHeight()
                             );
                             int[] preservedGrid = ConsoleFrameRenderer.fitPixelGrid(
-                                    hardwareBitmap.getWidth(),
-                                    hardwareBitmap.getHeight(),
-                                    requestedTargetWidth,
-                                    requestedTargetHeight
+                                    hardwareBitmap.getWidth(), hardwareBitmap.getHeight(),
+                                    requestedTargetWidth, requestedTargetHeight
                             );
                             int targetWidth = preservedGrid[0];
                             int targetHeight = preservedGrid[1];
-'''
-access = replace_once(access, old_gpu_target, new_gpu_target, "GPU preserved pixel grid")
+''',
+    "GPU preserved pixel grid",
+)
 
-# The accessibility CPU downsample already uses the complete source rectangle. Leave it intact;
-# changing only targetWidth/targetHeight above preserves its source aspect without a crop.
-
-old_cpu_lcd = r'''            int[] chassisScreen = ConsoleFrameRenderer.getScreenRect(
+access = replace_once(
+    access,
+    r'''            int[] chassisScreen = ConsoleFrameRenderer.getScreenRect(
                     service.windowFilterMode,
                     viewWidth,
                     viewHeight
@@ -88,8 +88,8 @@ old_cpu_lcd = r'''            int[] chassisScreen = ConsoleFrameRenderer.getScre
             top = chassisScreen[1];
             drawWidth = chassisScreen[2];
             drawHeight = chassisScreen[3];
-'''
-new_cpu_lcd = r'''            int[] lcdContent = ConsoleFrameRenderer.getContentRect(
+''',
+    r'''            int[] lcdContent = ConsoleFrameRenderer.getContentRect(
                     service.windowFilterMode,
                     viewWidth,
                     viewHeight,
@@ -100,14 +100,17 @@ new_cpu_lcd = r'''            int[] lcdContent = ConsoleFrameRenderer.getContent
             top = lcdContent[1];
             drawWidth = lcdContent[2];
             drawHeight = lcdContent[3];
-'''
-access = replace_once(access, old_cpu_lcd, new_cpu_lcd, "CPU physical LCD content window")
+''',
+    "CPU physical LCD content window",
+)
 access_path.write_text(access)
 
 
 gpu_path = root / "GpuFilterRenderer.java"
 gpu = gpu_path.read_text()
-old_gpu_lcd = r'''        int[] chassisScreen = ConsoleFrameRenderer.getScreenRect(
+gpu = replace_once(
+    gpu,
+    r'''        int[] chassisScreen = ConsoleFrameRenderer.getScreenRect(
                 mode,
                 safeViewWidth,
                 safeViewHeight
@@ -119,8 +122,8 @@ old_gpu_lcd = r'''        int[] chassisScreen = ConsoleFrameRenderer.getScreenRe
         runtimeShader.setFloatUniform("viewSize", drawWidth, drawHeight);
 
         ConsoleFrameRenderer.draw(
-'''
-new_gpu_lcd = r'''        int[] lcdContent = ConsoleFrameRenderer.getContentRect(
+''',
+    r'''        int[] lcdContent = ConsoleFrameRenderer.getContentRect(
                 mode,
                 safeViewWidth,
                 safeViewHeight,
@@ -136,17 +139,19 @@ new_gpu_lcd = r'''        int[] lcdContent = ConsoleFrameRenderer.getContentRect
         runtimeShader.setFloatUniform("cropSize", 1.0f, 1.0f);
 
         ConsoleFrameRenderer.draw(
-'''
-gpu = replace_once(gpu, old_gpu_lcd, new_gpu_lcd, "GPU physical LCD content window")
+''',
+    "GPU physical LCD content window",
+)
 gpu_path.write_text(gpu)
 
 
-# Fixed-console video: keep the source frame aspect before filtering, then fit the filtered
-# frame inside the selected console LCD. The selected resolution controls pixel density only.
+# Video: preserve the source aspect through filtering, then fit it inside the physical LCD.
 converter_path = root / "MediaFileConverter.java"
 converter = converter_path.read_text()
 
-old_video_dimensions = r'''            int contentTargetWidth = makeEven(GameBoyFilter.getVideoTargetWidth(
+converter = replace_once(
+    converter,
+    r'''            int contentTargetWidth = makeEven(GameBoyFilter.getVideoTargetWidth(
                     options.resolution, firstFrame.getWidth(), firstFrame.getHeight()
             ));
             int contentTargetHeight = makeEven(GameBoyFilter.getVideoTargetHeight(
@@ -159,8 +164,8 @@ old_video_dimensions = r'''            int contentTargetWidth = makeEven(GameBoy
             int targetHeight = chassisVideo
                     ? ConsoleFrameRenderer.VIDEO_FRAME_SIZE
                     : contentTargetHeight;
-'''
-new_video_dimensions = r'''            int contentTargetWidth = makeEven(GameBoyFilter.getVideoTargetWidth(
+''',
+    r'''            int contentTargetWidth = makeEven(GameBoyFilter.getVideoTargetWidth(
                     options.resolution, firstFrame.getWidth(), firstFrame.getHeight()
             ));
             int contentTargetHeight = makeEven(GameBoyFilter.getVideoTargetHeight(
@@ -169,10 +174,8 @@ new_video_dimensions = r'''            int contentTargetWidth = makeEven(GameBoy
             boolean chassisVideo = GameBoyFilter.isFixedAspectResolution(options.resolution);
             if (chassisVideo) {
                 int[] preservedGrid = ConsoleFrameRenderer.fitPixelGrid(
-                        firstFrame.getWidth(),
-                        firstFrame.getHeight(),
-                        contentTargetWidth,
-                        contentTargetHeight
+                        firstFrame.getWidth(), firstFrame.getHeight(),
+                        contentTargetWidth, contentTargetHeight
                 );
                 contentTargetWidth = preservedGrid[0];
                 contentTargetHeight = preservedGrid[1];
@@ -183,68 +186,60 @@ new_video_dimensions = r'''            int contentTargetWidth = makeEven(GameBoy
             int targetHeight = chassisVideo
                     ? ConsoleFrameRenderer.VIDEO_FRAME_SIZE
                     : contentTargetHeight;
-'''
-converter = replace_once(
-    converter,
-    old_video_dimensions,
-    new_video_dimensions,
+''',
     "video source-aspect pixel grid",
 )
 
 converter = replace_once(
     converter,
-    r'''    private static Bitmap prepareFilteredBitmap(
-            Bitmap source,
-            Options options,
-            boolean ignored,
-            int targetWidth,
-            int targetHeight
-    ) {
-        int width = Math.max(1, targetWidth);
-        int height = Math.max(1, targetHeight);
-        int[] crop = GameBoyFilter.getCenterCropBounds(
-                options.resolution,
-                source.getWidth(),
-                source.getHeight()
-        );
-''',
-    r'''    private static Bitmap prepareFilteredBitmap(
-            Bitmap source,
-            Options options,
-            boolean preserveSourceAspect,
-            int targetWidth,
-            int targetHeight
-    ) {
-        int width = Math.max(1, targetWidth);
-        int height = Math.max(1, targetHeight);
-        int[] crop = preserveSourceAspect
-                ? new int[]{0, 0, source.getWidth(), source.getHeight()}
-                : GameBoyFilter.getCenterCropBounds(
-                        options.resolution,
-                        source.getWidth(),
-                        source.getHeight()
-                );
-''',
-    "video prepare preserve aspect flag",
+    "            boolean ignored,\n            int targetWidth,\n            int targetHeight\n    ) {\n",
+    "            boolean preserveSourceAspect,\n            int targetWidth,\n            int targetHeight\n    ) {\n",
+    "video preserve-aspect parameter",
 )
 
-old_video_prepare = r'''                        filtered = prepareFilteredBitmap(
+converter = replace_once(
+    converter,
+    r'''        int[] crop = GameBoyFilter.getCenterCropBoundsForTarget(
+                options.resolution,
+                source.getWidth(),
+                source.getHeight(),
+                width,
+                height
+        );
+''',
+    r'''        int[] crop = preserveSourceAspect
+                ? new int[]{0, 0, source.getWidth(), source.getHeight()}
+                : GameBoyFilter.getCenterCropBoundsForTarget(
+                        options.resolution,
+                        source.getWidth(),
+                        source.getHeight(),
+                        width,
+                        height
+                );
+''',
+    "video full-source aspect preservation",
+)
+
+converter = replace_once(
+    converter,
+    r'''                        filtered = prepareFilteredBitmap(
                                 sourceFrame,
                                 options,
                                 false,
                                 contentTargetWidth,
                                 contentTargetHeight
                         );
-'''
-new_video_prepare = r'''                        filtered = prepareFilteredBitmap(
+''',
+    r'''                        filtered = prepareFilteredBitmap(
                                 sourceFrame,
                                 options,
                                 chassisVideo,
                                 contentTargetWidth,
                                 contentTargetHeight
                         );
-'''
-converter = replace_once(converter, old_video_prepare, new_video_prepare, "video preserve source aspect call")
+''',
+    "video preserve source aspect call",
+)
 
 converter = replace_once(
     converter,

@@ -7,7 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 
-/** Draws the supplied handheld image and maps filtered content into its physical LCD. */
+/** Draws the supplied handheld image and maps content into its physical LCD window. */
 final class ConsoleFrameRenderer {
     static final int VIDEO_FRAME_SIZE = 512;
 
@@ -48,21 +48,53 @@ final class ConsoleFrameRenderer {
         );
     }
 
-    /** Returns the live/game viewport, fitted inside the actual LCD without stretching. */
+    /** The physical LCD itself. It is never reduced to a mode/resolution aspect ratio. */
     static int[] getScreenRect(String mode, int viewWidth, int viewHeight) {
         Bitmap chassis = ChassisImageAssets.get(mode);
         RectF raw = getRawScreenRect(mode, chassis, Math.max(1, viewWidth), Math.max(1, viewHeight));
-        float targetAspect = modeAspect(mode);
-        RectF fitted = fitAspect(raw, targetAspect);
-        return new int[]{
-                Math.round(fitted.left),
-                Math.round(fitted.top),
-                Math.max(1, Math.round(fitted.width())),
-                Math.max(1, Math.round(fitted.height()))
-        };
+        return toIntRect(raw);
     }
 
-    /** Produces a self-contained video frame with the selected handheld around filtered content. */
+    /**
+     * Fits a source window inside the physical LCD while preserving the source aspect ratio.
+     * This is the only rectangle into which live/game/video content may be drawn.
+     */
+    static int[] getContentRect(
+            String mode,
+            int viewWidth,
+            int viewHeight,
+            int contentWidth,
+            int contentHeight
+    ) {
+        Bitmap chassis = ChassisImageAssets.get(mode);
+        RectF raw = getRawScreenRect(mode, chassis, Math.max(1, viewWidth), Math.max(1, viewHeight));
+        float contentAspect = Math.max(1, contentWidth) / (float) Math.max(1, contentHeight);
+        return toIntRect(fitAspect(raw, contentAspect));
+    }
+
+    /** Fits the pixel grid into a requested resolution box without changing source aspect. */
+    static int[] fitPixelGrid(
+            int sourceWidth,
+            int sourceHeight,
+            int maxWidth,
+            int maxHeight
+    ) {
+        int srcWidth = Math.max(1, sourceWidth);
+        int srcHeight = Math.max(1, sourceHeight);
+        int boxWidth = Math.max(1, maxWidth);
+        int boxHeight = Math.max(1, maxHeight);
+        float sourceAspect = srcWidth / (float) srcHeight;
+
+        int width = boxWidth;
+        int height = Math.max(1, Math.round(width / sourceAspect));
+        if (height > boxHeight) {
+            height = boxHeight;
+            width = Math.max(1, Math.round(height * sourceAspect));
+        }
+        return new int[]{Math.max(1, width), Math.max(1, height)};
+    }
+
+    /** Produces a video frame with the source aspect preserved inside the physical LCD. */
     static Bitmap composeVideoFrame(Bitmap content, String mode) {
         Bitmap result = Bitmap.createBitmap(
                 VIDEO_FRAME_SIZE,
@@ -72,18 +104,25 @@ final class ConsoleFrameRenderer {
         Canvas canvas = new Canvas(result);
         draw(canvas, mode, VIDEO_FRAME_SIZE, VIDEO_FRAME_SIZE);
 
-        Bitmap chassis = ChassisImageAssets.get(mode);
-        RectF raw = getRawScreenRect(mode, chassis, VIDEO_FRAME_SIZE, VIDEO_FRAME_SIZE);
-        float contentAspect = content.getWidth() / (float) Math.max(1, content.getHeight());
-        RectF destination = fitAspect(raw, contentAspect);
-
+        int[] destination = getContentRect(
+                mode,
+                VIDEO_FRAME_SIZE,
+                VIDEO_FRAME_SIZE,
+                content.getWidth(),
+                content.getHeight()
+        );
         Paint contentPaint = new Paint();
         contentPaint.setAntiAlias(false);
         contentPaint.setFilterBitmap(false);
         canvas.drawBitmap(
                 content,
                 new Rect(0, 0, content.getWidth(), content.getHeight()),
-                destination,
+                new Rect(
+                        destination[0],
+                        destination[1],
+                        destination[0] + destination[2],
+                        destination[1] + destination[3]
+                ),
                 contentPaint
         );
         return result;
@@ -131,14 +170,13 @@ final class ConsoleFrameRenderer {
         return new RectF(left, top, left + width, top + height);
     }
 
-    private static float modeAspect(String mode) {
-        if (GameBoyFilter.MODE_GBA.equals(mode)) {
-            return 240.0f / 160.0f;
-        }
-        if (GameBoyFilter.MODE_DS.equals(mode)) {
-            return 256.0f / 192.0f;
-        }
-        return 160.0f / 144.0f;
+    private static int[] toIntRect(RectF rect) {
+        return new int[]{
+                Math.round(rect.left),
+                Math.round(rect.top),
+                Math.max(1, Math.round(rect.width())),
+                Math.max(1, Math.round(rect.height()))
+        };
     }
 
     private static float[] screenSlot(String mode) {

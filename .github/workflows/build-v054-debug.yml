@@ -2,7 +2,7 @@ name: v0.1.54 Live GB Fit Touch Debug APK
 
 on:
   push:
-    branches: [build/v0.1.54-lcd-window-aspect]
+    branches: [build/v0.1.54-live-gb-fit-touch]
   workflow_dispatch:
 
 permissions:

@@ -324,7 +324,7 @@ replace_once(
             super(context);
             paint.setFilterBitmap(false);
             paint.setAntiAlias(false);
-            setBackgroundColor(Color.BLACK);
+            setBackgroundColor(Color.TRANSPARENT);
         }
 ''',
     '''    private static final class FilterOverlayView extends View {
@@ -353,7 +353,7 @@ replace_once(
             }
             paint.setFilterBitmap(false);
             paint.setAntiAlias(false);
-            setBackgroundColor(Color.BLACK);
+            setBackgroundColor(Color.TRANSPARENT);
         }
 ''',
     "overlay fields and constructor",

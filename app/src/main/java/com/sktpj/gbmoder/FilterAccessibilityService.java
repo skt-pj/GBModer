@@ -533,9 +533,10 @@ public class FilterAccessibilityService extends AccessibilityService {
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                PixelFormat.OPAQUE
+                PixelFormat.TRANSLUCENT
         );
         overlayParams.gravity = Gravity.TOP | Gravity.START;
         overlayParams.alpha = 1.0f;
@@ -549,7 +550,7 @@ public class FilterAccessibilityService extends AccessibilityService {
         windowManager.addView(overlayView, overlayParams);
         updateSystemUiVisibility();
         updateOverlayVisibility();
-        Log.i(TAG, "Opaque accessibility overlay added alpha=1.0 bounds=" + overlayBounds);
+        Log.i(TAG, "Touch-through translucent accessibility overlay added bounds=" + overlayBounds);
     }
 
     private void updateOverlayBoundsIfNeeded() {
@@ -799,7 +800,7 @@ public class FilterAccessibilityService extends AccessibilityService {
             super(context);
             paint.setFilterBitmap(false);
             paint.setAntiAlias(false);
-            setBackgroundColor(Color.BLACK);
+            setBackgroundColor(Color.TRANSPARENT);
         }
 
         void showProbe() {

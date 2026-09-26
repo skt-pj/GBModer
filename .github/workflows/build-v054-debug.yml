@@ -23,12 +23,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: '15859902'
-
       - name: Install Android SDK packages
-        run: yes | sdkmanager --channel=3 "platforms;android-37.0" "build-tools;36.0.0"
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          yes | "$SDKMANAGER" --channel=3 "platforms;android-37.0" "build-tools;36.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
         with:

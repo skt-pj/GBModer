@@ -1,0 +1,113 @@
+name: v0.1.55 GB Width Fit Bottom Crop Debug APK
+
+on:
+  push:
+    branches: [build/v0.1.55-gb-widthfit-bottomcrop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v055-gb-widthfit-bottomcrop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Restore common signing key
+        run: |
+          mkdir -p ci
+          curl -fsSL https://raw.githubusercontent.com/skt-pj/2048TD/main/ci/2048td-release.jks.b64 -o ci/skt-common-signing.jks.b64
+          base64 --decode ci/skt-common-signing.jks.b64 > ci/skt-common-signing.jks
+
+      - name: Apply v0.1.55 version
+        run: |
+          set -euo pipefail
+          source version.properties
+          test "$VERSION_NAME" = "0.1.55"
+          test "$VERSION_CODE" = "56"
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" app/build.gradle
+          sed -i -E "s/versionName '[^']+'/versionName '${VERSION_NAME}'/" app/build.gradle
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+
+      - name: Build and verify v0.1.55 debug APK
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -PGBMODER_DEBUG_FEATURES=true :app:testDebugUnitTest :app:assembleDebug
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('app/build/generated/gbmoderGpu/java/com/sktpj/gbmoder')
+          capture = (root / 'FilterCaptureService.java').read_text()
+          access = (root / 'FilterAccessibilityService.java').read_text()
+          gpu = (root / 'GpuFilterRenderer.java').read_text()
+          renderer = (root / 'ConsoleFrameRenderer.java').read_text()
+
+          assert 'canvas.drawColor(Color.WHITE)' in renderer
+          assert 'getOpaqueBounds(chassis)' in renderer
+          assert 'getSourceRectForWidthFit' in renderer
+          assert 'if (!GameBoyFilter.MODE_GB.equals(mode))' in renderer
+          assert 'raw.top + height' in renderer
+          assert 'GameBoyFilter.MODE_GB.equals(mode)' in capture
+          assert '? new int[]{0, 0, sourceWidth, sourceHeight}' in capture
+          assert 'ConsoleFrameRenderer.getSourceRectForWidthFit' in access
+          assert 'PixelFormat.TRANSLUCENT' in access
+          assert 'FLAG_NOT_TOUCHABLE' in access
+          assert 'FLAG_NOT_TOUCH_MODAL' in access
+          assert 'ConsoleFrameRenderer.getSourceCropForWidthFit' in gpu
+          assert 'setFloatUniform("cropOffset", sourceCrop[0], sourceCrop[1])' in gpu
+          assert 'setFloatUniform("cropSize", sourceCrop[2], sourceCrop[3])' in gpu
+          print('v0.1.55 GB live geometry verification passed')
+          PY
+
+          out="app/build/outputs/apk/debug"
+          cp "$out/app-debug.apk" "$out/GBModer-v${VERSION_NAME}-debug-features.apk"
+          sha256sum "$out/GBModer-v${VERSION_NAME}-debug-features.apk" | tee "$out/GBModer-v${VERSION_NAME}-debug-features.apk.sha256"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$out/GBModer-v${VERSION_NAME}-debug-features.apk" | tee "$out/debug-signing-certificate.txt"
+          cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$out/debug-signing-certificate.txt" | head -n1 | tr -d ':' | tr '[:lower:]' '[:upper:]')
+          test "$cert" = "E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$out/GBModer-v${VERSION_NAME}-debug-features.apk" | head -n 5 | tee "$out/apk-badging.txt"
+          grep -q "versionCode='56'" "$out/apk-badging.txt"
+          grep -q "versionName='0.1.55'" "$out/apk-badging.txt"
+          cat > "$out/build-metadata.txt" <<EOF
+          repository=skt-pj/GBModer
+          branch=${GITHUB_REF_NAME}
+          commit=${GITHUB_SHA}
+          run_id=${GITHUB_RUN_ID}
+          versionName=${VERSION_NAME}
+          versionCode=${VERSION_CODE}
+          debugFeatures=true
+          gbChassisCentered=true
+          gbLcdWidthFit=true
+          gbBottomCrop=true
+          outsideLcdOpaque=true
+          touchThroughOverlay=true
+          signerSha256=${cert}
+          buildTest=:app:testDebugUnitTest,:app:assembleDebug
+          EOF
+
+      - name: Upload v0.1.55 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GBModer-v${{ env.VERSION_NAME }}-debug-features-v055-gb-widthfit-bottomcrop
+          path: |
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk
+            app/build/outputs/apk/debug/GBModer-v${{ env.VERSION_NAME }}-debug-features.apk.sha256
+            app/build/outputs/apk/debug/debug-signing-certificate.txt
+            app/build/outputs/apk/debug/apk-badging.txt
+            app/build/outputs/apk/debug/build-metadata.txt
+          if-no-files-found: error

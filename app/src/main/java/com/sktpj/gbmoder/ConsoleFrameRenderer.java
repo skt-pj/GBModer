@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 
@@ -37,10 +36,10 @@ final class ConsoleFrameRenderer {
     static void draw(Canvas canvas, String mode, int viewWidth, int viewHeight) {
         int width = Math.max(1, viewWidth);
         int height = Math.max(1, viewHeight);
-        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+        canvas.drawColor(Color.WHITE);
 
         Bitmap chassis = ChassisImageAssets.get(mode);
-        RectF destination = getImageRect(chassis, width, height);
+        RectF destination = getImageRect(mode, chassis, width, height);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         canvas.drawBitmap(
                 chassis,
@@ -72,12 +71,8 @@ final class ConsoleFrameRenderer {
         RectF raw = getRawScreenRect(mode, chassis, Math.max(1, viewWidth), Math.max(1, viewHeight));
         float contentAspect = Math.max(1, contentWidth) / (float) Math.max(1, contentHeight);
         float width = raw.width();
-        float height = width / Math.max(0.01f, contentAspect);
-        if (height > raw.height()) {
-            height = raw.height();
-        }
-        float top = raw.top + (raw.height() - height) * 0.5f;
-        return toIntRect(new RectF(raw.left, top, raw.right, top + height));
+        float height = Math.min(raw.height(), width / Math.max(0.01f, contentAspect));
+        return toIntRect(new RectF(raw.left, raw.top, raw.right, raw.top + height));
     }
 
     /** Fits the pixel grid into a requested resolution box without changing source aspect. */
@@ -90,16 +85,11 @@ final class ConsoleFrameRenderer {
         int srcWidth = Math.max(1, sourceWidth);
         int srcHeight = Math.max(1, sourceHeight);
         int boxWidth = Math.max(1, maxWidth);
-        int boxHeight = Math.max(1, maxHeight);
         float sourceAspect = srcWidth / (float) srcHeight;
 
         int width = boxWidth;
         int height = Math.max(1, Math.round(width / sourceAspect));
-        if (height > boxHeight) {
-            height = boxHeight;
-            width = Math.max(1, Math.round(height * sourceAspect));
-        }
-        return new int[]{Math.max(1, width), Math.max(1, height)};
+        return new int[]{width, height};
     }
 
     /** Produces a video frame with the source aspect preserved inside the physical LCD. */
@@ -122,9 +112,16 @@ final class ConsoleFrameRenderer {
         Paint contentPaint = new Paint();
         contentPaint.setAntiAlias(false);
         contentPaint.setFilterBitmap(false);
+        int[] source = getSourceRectForWidthFit(
+                mode,
+                VIDEO_FRAME_SIZE,
+                VIDEO_FRAME_SIZE,
+                content.getWidth(),
+                content.getHeight()
+        );
         canvas.drawBitmap(
                 content,
-                new Rect(0, 0, content.getWidth(), content.getHeight()),
+                new Rect(source[0], source[1], source[2], source[3]),
                 new Rect(
                         destination[0],
                         destination[1],
@@ -142,7 +139,7 @@ final class ConsoleFrameRenderer {
             int viewWidth,
             int viewHeight
     ) {
-        RectF image = getImageRect(chassis, viewWidth, viewHeight);
+        RectF image = getImageRect(mode, chassis, viewWidth, viewHeight);
         float[] slot = screenSlot(mode);
         return new RectF(
                 image.left + image.width() * slot[0],
@@ -152,7 +149,7 @@ final class ConsoleFrameRenderer {
         );
     }
 
-    private static RectF getImageRect(Bitmap chassis, int viewWidth, int viewHeight) {
+    private static RectF getImageRect(String mode, Bitmap chassis, int viewWidth, int viewHeight) {
         float sourceAspect = chassis.getWidth() / (float) Math.max(1, chassis.getHeight());
         float width = viewWidth;
         float height = width / sourceAspect;
@@ -162,7 +159,90 @@ final class ConsoleFrameRenderer {
         }
         float left = (viewWidth - width) * 0.5f;
         float top = (viewHeight - height) * 0.5f;
+
+        if (GameBoyFilter.MODE_GB.equals(mode)) {
+            Rect opaque = getOpaqueBounds(chassis);
+            if (!opaque.isEmpty()) {
+                float scale = width / Math.max(1.0f, chassis.getWidth());
+                float opaqueCenterX = left + ((opaque.left + opaque.right) * 0.5f * scale);
+                left += (viewWidth * 0.5f) - opaqueCenterX;
+            }
+        }
         return new RectF(left, top, left + width, top + height);
+    }
+
+    static int[] getSourceRectForWidthFit(
+            String mode,
+            int viewWidth,
+            int viewHeight,
+            int sourceWidth,
+            int sourceHeight
+    ) {
+        Bitmap chassis = ChassisImageAssets.get(mode);
+        RectF raw = getRawScreenRect(
+                mode,
+                chassis,
+                Math.max(1, viewWidth),
+                Math.max(1, viewHeight)
+        );
+        int srcWidth = Math.max(1, sourceWidth);
+        int srcHeight = Math.max(1, sourceHeight);
+        float lcdAspect = raw.width() / Math.max(1.0f, raw.height());
+        int cropHeight = Math.min(
+                srcHeight,
+                Math.max(1, Math.round(srcWidth / Math.max(0.01f, lcdAspect)))
+        );
+        return new int[]{0, 0, srcWidth, cropHeight};
+    }
+
+    static float[] getSourceCropForWidthFit(
+            String mode,
+            int viewWidth,
+            int viewHeight,
+            int sourceWidth,
+            int sourceHeight
+    ) {
+        int[] crop = getSourceRectForWidthFit(
+                mode,
+                viewWidth,
+                viewHeight,
+                sourceWidth,
+                sourceHeight
+        );
+        return new float[]{
+                0.0f,
+                0.0f,
+                1.0f,
+                crop[3] / (float) Math.max(1, sourceHeight)
+        };
+    }
+
+    private static Rect getOpaqueBounds(Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int[] pixels = new int[width * height];
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+
+        int left = width;
+        int top = height;
+        int right = -1;
+        int bottom = -1;
+        for (int y = 0; y < height; y++) {
+            int row = y * width;
+            for (int x = 0; x < width; x++) {
+                if (((pixels[row + x] >>> 24) & 0xFF) == 0) {
+                    continue;
+                }
+                if (x < left) left = x;
+                if (x > right) right = x;
+                if (y < top) top = y;
+                if (y > bottom) bottom = y;
+            }
+        }
+        if (right < left || bottom < top) {
+            return new Rect();
+        }
+        return new Rect(left, top, right + 1, bottom + 1);
     }
 
     private static RectF fitAspect(RectF slot, float aspect) {

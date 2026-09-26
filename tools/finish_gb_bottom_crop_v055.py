@@ -26,13 +26,13 @@ capture = replace_once(
     r'''            int requestedTargetWidth = GameBoyFilter.getTargetWidth(resolution, sourceWidth);
             int requestedTargetHeight = GameBoyFilter.getTargetHeight(resolution, sourceHeight);
             int targetWidth = requestedTargetWidth;
-            int targetHeight = requestedTargetHeight;
-            if (GameBoyFilter.MODE_GB.equals(mode)) {
-                targetHeight = Math.max(
-                        1,
-                        Math.round(targetWidth * (sourceHeight / (float) Math.max(1, sourceWidth)))
-                );
-            }
+            int targetHeight = GameBoyFilter.MODE_GB.equals(mode)
+                    ? Math.max(
+                            1,
+                            Math.round(targetWidth
+                                    * (sourceHeight / (float) Math.max(1, sourceWidth)))
+                    )
+                    : requestedTargetHeight;
 ''',
     "GB MediaProjection target aspect",
 )
@@ -79,16 +79,15 @@ access = replace_once(
                     source.getWidth(), source.getHeight(),
                     requestedTargetWidth, requestedTargetHeight
             );
-            int targetWidth = preservedGrid[0];
-            int targetHeight = preservedGrid[1];
-            if (GameBoyFilter.MODE_GB.equals(windowFilterMode)) {
-                targetWidth = requestedTargetWidth;
-                targetHeight = Math.max(
-                        1,
-                        Math.round(targetWidth * (source.getHeight()
-                                / (float) Math.max(1, source.getWidth())))
-                );
-            }
+            boolean gbWidthFit = GameBoyFilter.MODE_GB.equals(windowFilterMode);
+            int targetWidth = gbWidthFit ? requestedTargetWidth : preservedGrid[0];
+            int targetHeight = gbWidthFit
+                    ? Math.max(
+                            1,
+                            Math.round(targetWidth * (source.getHeight()
+                                    / (float) Math.max(1, source.getWidth())))
+                    )
+                    : preservedGrid[1];
 ''',
     "GB accessibility CPU target aspect",
 )
@@ -105,16 +104,15 @@ access = replace_once(
                                     hardwareBitmap.getWidth(), hardwareBitmap.getHeight(),
                                     requestedTargetWidth, requestedTargetHeight
                             );
-                            int targetWidth = preservedGrid[0];
-                            int targetHeight = preservedGrid[1];
-                            if (GameBoyFilter.MODE_GB.equals(windowFilterMode)) {
-                                targetWidth = requestedTargetWidth;
-                                targetHeight = Math.max(
-                                        1,
-                                        Math.round(targetWidth * (hardwareBitmap.getHeight()
-                                                / (float) Math.max(1, hardwareBitmap.getWidth())))
-                                );
-                            }
+                            boolean gbWidthFit = GameBoyFilter.MODE_GB.equals(windowFilterMode);
+                            int targetWidth = gbWidthFit ? requestedTargetWidth : preservedGrid[0];
+                            int targetHeight = gbWidthFit
+                                    ? Math.max(
+                                            1,
+                                            Math.round(targetWidth * (hardwareBitmap.getHeight()
+                                                    / (float) Math.max(1, hardwareBitmap.getWidth())))
+                                    )
+                                    : preservedGrid[1];
 ''',
     "GB accessibility GPU target aspect",
 )

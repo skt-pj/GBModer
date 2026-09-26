@@ -37,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           source version.properties
-          test "$VERSION_NAME" = "0.1.53"
+          test "$VERSION_NAME" = "0.1.54"
           test "$VERSION_CODE" = "55"
           sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" app/build.gradle
           sed -i -E "s/versionName '[^']+'/versionName '${VERSION_NAME}'/" app/build.gradle

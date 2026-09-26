@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 
@@ -11,7 +12,8 @@ import android.graphics.RectF;
 final class ConsoleFrameRenderer {
     static final int VIDEO_FRAME_SIZE = 512;
 
-    private static final float[] GB_SCREEN = {0.240000f, 0.144681f, 0.760000f, 0.440851f};
+    // Measured from the embedded 163x256 GB background: active LCD ~= x60..161, y49..140.
+    private static final float[] GB_SCREEN = {0.368098f, 0.191406f, 0.987730f, 0.546875f};
     private static final float[] GBC_SCREEN = {0.214286f, 0.138865f, 0.791429f, 0.466376f};
     private static final float[] GBA_SCREEN = {0.300826f, 0.211921f, 0.700000f, 0.667550f};
     private static final float[] DS_SCREEN = {0.275238f, 0.095495f, 0.736190f, 0.423423f};
@@ -35,7 +37,7 @@ final class ConsoleFrameRenderer {
     static void draw(Canvas canvas, String mode, int viewWidth, int viewHeight) {
         int width = Math.max(1, viewWidth);
         int height = Math.max(1, viewHeight);
-        canvas.drawColor(Color.WHITE);
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
         Bitmap chassis = ChassisImageAssets.get(mode);
         RectF destination = getImageRect(chassis, width, height);
@@ -69,7 +71,13 @@ final class ConsoleFrameRenderer {
         Bitmap chassis = ChassisImageAssets.get(mode);
         RectF raw = getRawScreenRect(mode, chassis, Math.max(1, viewWidth), Math.max(1, viewHeight));
         float contentAspect = Math.max(1, contentWidth) / (float) Math.max(1, contentHeight);
-        return toIntRect(fitAspect(raw, contentAspect));
+        float width = raw.width();
+        float height = width / Math.max(0.01f, contentAspect);
+        if (height > raw.height()) {
+            height = raw.height();
+        }
+        float top = raw.top + (raw.height() - height) * 0.5f;
+        return toIntRect(new RectF(raw.left, top, raw.right, top + height));
     }
 
     /** Fits the pixel grid into a requested resolution box without changing source aspect. */

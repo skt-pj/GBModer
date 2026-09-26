@@ -37,8 +37,69 @@ final class ChassisImageAssets {
 
     private static Bitmap decode(String encoded) {
         byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
-        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-        if (bitmap == null) throw new IllegalStateException("chassis image decode failed");
+        Bitmap decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        if (decoded == null) throw new IllegalStateException("chassis image decode failed");
+
+        Bitmap bitmap = decoded.copy(Bitmap.Config.ARGB_8888, true);
+        if (bitmap == null) throw new IllegalStateException("chassis image copy failed");
+        if (bitmap != decoded) decoded.recycle();
+        clearConnectedWhiteBackground(bitmap);
         return bitmap;
+    }
+
+    private static void clearConnectedWhiteBackground(Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int count = width * height;
+        int[] pixels = new int[count];
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+
+        boolean[] visited = new boolean[count];
+        int[] queue = new int[count];
+        int head = 0;
+        int tail = 0;
+
+        for (int x = 0; x < width; x++) {
+            tail = enqueueBackground(pixels, visited, queue, tail, x);
+            tail = enqueueBackground(pixels, visited, queue, tail, (height - 1) * width + x);
+        }
+        for (int y = 0; y < height; y++) {
+            tail = enqueueBackground(pixels, visited, queue, tail, y * width);
+            tail = enqueueBackground(pixels, visited, queue, tail, y * width + width - 1);
+        }
+
+        while (head < tail) {
+            int index = queue[head++];
+            pixels[index] = 0x00000000;
+            int x = index % width;
+            int y = index / width;
+            if (x > 0) tail = enqueueBackground(pixels, visited, queue, tail, index - 1);
+            if (x + 1 < width) tail = enqueueBackground(pixels, visited, queue, tail, index + 1);
+            if (y > 0) tail = enqueueBackground(pixels, visited, queue, tail, index - width);
+            if (y + 1 < height) tail = enqueueBackground(pixels, visited, queue, tail, index + width);
+        }
+
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
+    }
+
+    private static int enqueueBackground(
+            int[] pixels,
+            boolean[] visited,
+            int[] queue,
+            int tail,
+            int index
+    ) {
+        if (visited[index]) return tail;
+        visited[index] = true;
+        int color = pixels[index];
+        int red = (color >> 16) & 0xFF;
+        int green = (color >> 8) & 0xFF;
+        int blue = color & 0xFF;
+        int max = Math.max(red, Math.max(green, blue));
+        int min = Math.min(red, Math.min(green, blue));
+        if (red >= 242 && green >= 242 && blue >= 242 && max - min <= 10) {
+            queue[tail++] = index;
+        }
+        return tail;
     }
 }

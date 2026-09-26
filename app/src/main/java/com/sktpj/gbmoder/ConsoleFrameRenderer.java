@@ -70,9 +70,12 @@ final class ConsoleFrameRenderer {
         Bitmap chassis = ChassisImageAssets.get(mode);
         RectF raw = getRawScreenRect(mode, chassis, Math.max(1, viewWidth), Math.max(1, viewHeight));
         float contentAspect = Math.max(1, contentWidth) / (float) Math.max(1, contentHeight);
-        float width = raw.width();
-        float height = Math.min(raw.height(), width / Math.max(0.01f, contentAspect));
-        return toIntRect(new RectF(raw.left, raw.top, raw.right, raw.top + height));
+        if (GameBoyFilter.MODE_GB.equals(mode)) {
+            float width = raw.width();
+            float height = Math.min(raw.height(), width / Math.max(0.01f, contentAspect));
+            return toIntRect(new RectF(raw.left, raw.top, raw.right, raw.top + height));
+        }
+        return toIntRect(fitAspect(raw, contentAspect));
     }
 
     /** Fits the pixel grid into a requested resolution box without changing source aspect. */
@@ -85,11 +88,16 @@ final class ConsoleFrameRenderer {
         int srcWidth = Math.max(1, sourceWidth);
         int srcHeight = Math.max(1, sourceHeight);
         int boxWidth = Math.max(1, maxWidth);
+        int boxHeight = Math.max(1, maxHeight);
         float sourceAspect = srcWidth / (float) srcHeight;
 
         int width = boxWidth;
         int height = Math.max(1, Math.round(width / sourceAspect));
-        return new int[]{width, height};
+        if (height > boxHeight) {
+            height = boxHeight;
+            width = Math.max(1, Math.round(height * sourceAspect));
+        }
+        return new int[]{Math.max(1, width), Math.max(1, height)};
     }
 
     /** Produces a video frame with the source aspect preserved inside the physical LCD. */
@@ -178,6 +186,11 @@ final class ConsoleFrameRenderer {
             int sourceWidth,
             int sourceHeight
     ) {
+        int srcWidth = Math.max(1, sourceWidth);
+        int srcHeight = Math.max(1, sourceHeight);
+        if (!GameBoyFilter.MODE_GB.equals(mode)) {
+            return new int[]{0, 0, srcWidth, srcHeight};
+        }
         Bitmap chassis = ChassisImageAssets.get(mode);
         RectF raw = getRawScreenRect(
                 mode,
@@ -185,8 +198,6 @@ final class ConsoleFrameRenderer {
                 Math.max(1, viewWidth),
                 Math.max(1, viewHeight)
         );
-        int srcWidth = Math.max(1, sourceWidth);
-        int srcHeight = Math.max(1, sourceHeight);
         float lcdAspect = raw.width() / Math.max(1.0f, raw.height());
         int cropHeight = Math.min(
                 srcHeight,

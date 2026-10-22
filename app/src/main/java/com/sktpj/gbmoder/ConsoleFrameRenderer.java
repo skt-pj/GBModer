@@ -12,7 +12,7 @@ final class ConsoleFrameRenderer {
     static final int VIDEO_FRAME_SIZE = 512;
 
     // Measured from the embedded 163x256 GB background: active LCD ~= x60..161, y49..140.
-    private static final float[] GB_SCREEN = {0.368098f, 0.191406f, 0.987730f, 0.546875f};
+    private static final float[] GB_SCREEN = {0.208791f, 0.177481f, 0.780220f, 0.474555f};
     private static final float[] GBC_SCREEN = {0.214286f, 0.138865f, 0.791429f, 0.466376f};
     private static final float[] GBA_SCREEN = {0.300826f, 0.211921f, 0.700000f, 0.667550f};
     private static final float[] DS_SCREEN = {0.275238f, 0.095495f, 0.736190f, 0.423423f};

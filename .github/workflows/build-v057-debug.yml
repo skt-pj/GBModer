@@ -3,6 +3,8 @@ name: v0.1.57 Full Screen Chassis SGB Live Layout Debug APK
 on:
   push:
     branches: [feat/all-layout-modes]
+  pull_request:
+    branches: [build/v0.1.56-gb-chassis-realignment]
   workflow_dispatch:
 
 permissions:

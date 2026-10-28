@@ -64,11 +64,11 @@ once(
 
 once(
     '''                        captureRoutePosition,
-                        textRecognitionEnabled,
+                        false,
                     )
 ''',
     '''                        captureRoutePosition,
-                        textRecognitionEnabled,
+                        false,
                         layoutPosition,
                     )
 ''',

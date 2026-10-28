@@ -26,8 +26,8 @@ main = once(
 )
 main = once(
     main,
-    "                uiTextRecognitionEnabled = textRecognitionEnabled;\n                beginStartFlow();",
-    "                uiTextRecognitionEnabled = textRecognitionEnabled;\n"
+    "                uiTextRecognitionEnabled = false;\n                beginStartFlow();",
+    "                uiTextRecognitionEnabled = false;\n"
     "                LiveLayoutRenderer.setLayoutMode(layoutPosition);\n"
     "                beginStartFlow();",
     "set selected layout before capture begins",

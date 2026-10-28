@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           source version.properties
-          test "$VERSION_NAME" = "0.1.56"
+          test "$VERSION_NAME" = "0.1.57"
           test "$VERSION_CODE" = "58"
           sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" app/build.gradle
           sed -i -E "s/versionName '[^']+'/versionName '${VERSION_NAME}'/" app/build.gradle
@@ -95,7 +95,7 @@ jobs:
           test "$cert" = "E648320071B8AB0DE038F76790064B99461B67D7DBE7CE7506D12A5F4FA884D8"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$out/GBModer-v${VERSION_NAME}-debug-features.apk" | head -n 5 | tee "$out/apk-badging.txt"
           grep -q "versionCode='58'" "$out/apk-badging.txt"
-          grep -q "versionName='0.1.56'" "$out/apk-badging.txt"
+          grep -q "versionName='0.1.57'" "$out/apk-badging.txt"
           cat > "$out/build-metadata.txt" <<EOF
           repository=skt-pj/GBModer
           branch=${GITHUB_REF_NAME}

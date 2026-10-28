@@ -18,7 +18,8 @@ for command in (
     [sys.executable, str(repo / "tools/finish_2048_menu_v043.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_text_defaults_v045.py"), str(generated_root)],
     [sys.executable, str(repo / "tools/finish_ui_restore_v046.py"), str(generated_root)],
+    [sys.executable, str(repo / "tools/finish_live_layout_kotlin_v057.py"), str(generated_root)],
 ):
     subprocess.run(command, cwd=repo, check=True)
 
-print("billing/release Kotlin sources prepared through v0.1.46; v0.1.47/48 settings backdrop experiments removed", flush=True)
+print("billing/release Kotlin sources prepared through v0.1.57; v0.1.47/48 settings backdrop experiments removed", flush=True)
